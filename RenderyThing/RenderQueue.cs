@@ -2,19 +2,19 @@ namespace RenderyThing;
 
 public sealed class RenderQueue
 {
-    List<RenderSprite> spriteQueue = new();
+    List<RenderSprite> _spriteQueue = new();
 
     public void ClearQueue()
     {
-        spriteQueue = new();
+        _spriteQueue = new();
     }
 
-    public void QueueSprite(RenderSprite sprite) => spriteQueue.Add(sprite);
+    public void QueueSprite(RenderSprite sprite) => _spriteQueue.Add(sprite);
 
     //is this even a good idea???
-    public void Finalise(out List<RenderSprite> sq)
+    public void Finalize(out List<RenderSprite> sq)
     {
-        sq = spriteQueue;
+        sq = _spriteQueue;
         ClearQueue();
     }
 }
