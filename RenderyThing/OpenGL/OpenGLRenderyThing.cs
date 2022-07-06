@@ -113,7 +113,6 @@ public unsafe sealed class OpenGLRenderer : Renderer
            throw new Exception("what.");
         
         _gl.Uniform1(_gl.GetUniformLocation(_shader, "texture1"), 0);
-
         _gl.ActiveTexture(TextureUnit.Texture0);
 
         _gl.Enable(EnableCap.Blend);
