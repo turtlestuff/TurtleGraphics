@@ -31,7 +31,7 @@ public unsafe sealed class OpenGLRenderer : Renderer
         uniform sampler2D texture1;
         uniform vec4 color;
 
-        out vec4 color;
+        out vec4 fragColor;
         void main()
         {
             fragColor = color * texture(texture1, texCoord);
@@ -89,7 +89,7 @@ public unsafe sealed class OpenGLRenderer : Renderer
         var frag = _gl.CreateShader(ShaderType.FragmentShader);
         _gl.ShaderSource(frag, fragSource);
         _gl.CompileShader(frag);
-        _gl.GetShaderInfoLog(vert);
+        _gl.GetShaderInfoLog(frag);
         if(info != "") 
             throw new Exception("compilation of fragment shader failed: " + info);
 
@@ -115,6 +115,10 @@ public unsafe sealed class OpenGLRenderer : Renderer
         _gl.Uniform1(_gl.GetUniformLocation(_shader, "texture1"), 0);
 
         _gl.ActiveTexture(TextureUnit.Texture0);
+
+        _gl.Enable(EnableCap.Blend);
+        _gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+
         _window.Resize += size => 
         {
             _gl.Viewport(size);
@@ -148,6 +152,12 @@ public unsafe sealed class OpenGLRenderer : Renderer
             tex.Use();
             _gl.DrawArrays(PrimitiveType.Triangles, 0, 6);  
         }
+    }
+
+    public override void Clear(Vector4D<float> color)
+    {
+        _gl.ClearColor(color * 255);
+        _gl.Clear(ClearBufferMask.ColorBufferBit);
     }
 
     public override void Dispose()
