@@ -1,15 +1,9 @@
-using System.Data;
-using System.Linq.Expressions;
-using System.Numerics;
-using System.Reflection.Metadata;
-using System.Runtime.Intrinsics.X86;
-using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
 
-namespace RenderyThing;
+namespace RenderyThing.OpenGL;
 
-public unsafe class OpenGLRenderer : Renderer
+public unsafe sealed class OpenGLRenderer : Renderer
 {
     //TODO: move to files!
     const string vertSource = 
@@ -108,21 +102,36 @@ public unsafe class OpenGLRenderer : Renderer
         if (_modelUniform == -1 || _projectionUniform == -1)
            throw new Exception("what.");
     }
-    
+
+    public override Texture AddTexture(Stream file, string name)
+    {
+        throw new NotImplementedException();
+    }
+
+    public override Texture GetTexture(string name)
+    {
+        throw new NotImplementedException();
+    }
+
     public override void Render(RenderQueue queue)
     {
         queue.Finalize(out var sprites);
         _gl.UseProgram(_shader);
         _gl.BindVertexArray(_quadVao);
         var projectionMatrix = Matrix4X4<float>.Identity * Matrix4X4.CreateOrthographicOffCenter(0f, 800f, 600f, 0f, -100f, 100f);
-        _gl.UniformMatrix4(_projectionUniform, 1, false, (float*)&projectionMatrix);
         foreach (var sprite in sprites)
         {
             var modelMatrix = 
                 Matrix4X4<float>.Identity * Matrix4X4.CreateScale(20f, 20f, 1f) * Matrix4X4.CreateTranslation(new Vector3D<float>(sprite.Position, 0f));
+            _gl.UniformMatrix4(_projectionUniform, 1, false, (float*)&projectionMatrix);
             _gl.UniformMatrix4(_modelUniform, 1, false, (float*)&modelMatrix);
             
             _gl.DrawArrays(PrimitiveType.Triangles, 0, 6);  
         }
+    }
+
+    public override void Dispose()
+    {
+        throw new NotImplementedException();
     }
 }

@@ -1,5 +1,4 @@
 ﻿using RenderyThing;
-using Silk.NET.Maths;
 using Silk.NET.Windowing;
 
 IWindow window;
