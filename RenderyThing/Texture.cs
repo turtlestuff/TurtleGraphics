@@ -1,11 +1,24 @@
 namespace RenderyThing;
 
+public enum ScalingType
+{
+    NearestNeighbor,
+    Linear
+}
+
+public sealed class TextureOptions 
+{
+    public ScalingType ScalingType { get; init; } = ScalingType.Linear;
+}
+
 public abstract class Texture : IDisposable
 {
-    public Vector2D<int> Size { get; }
-    internal Texture(Vector2D<int> size)
+    public TextureOptions Options { get; }
+    public Vector2D<int> Size { get; protected set; }
+    internal Texture(TextureOptions options)
     {
-        Size = size;
+        Options = options;
+        Size = Vector2D<int>.Zero;
     }
 
     public abstract void Dispose();

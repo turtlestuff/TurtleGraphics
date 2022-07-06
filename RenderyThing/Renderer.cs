@@ -4,6 +4,7 @@ namespace RenderyThing;
 
 public abstract class Renderer : IDisposable
 {   
+    protected Dictionary<string, Texture> _textures = new();
     public static Renderer GetApi(IWindow window)
     {
         return new OpenGL.OpenGLRenderer(window);
@@ -18,9 +19,16 @@ public abstract class Renderer : IDisposable
         _window = window;
     }
 
-    public abstract Texture AddTexture(Stream file, string name);
+    public virtual Texture AddTexture(Stream file, string name, TextureOptions options)
+    {
+        var tex = CreateTexture(file, options);
+        _textures.Add(name, tex);
+        return tex;
+    }
 
-    public abstract Texture GetTexture(string name);
+    protected abstract Texture CreateTexture(Stream file, TextureOptions options);
+    public virtual Texture GetTexture(string name) => _textures[name];
+    
     public abstract void Render(RenderQueue queue);
 
     public abstract void Dispose();
