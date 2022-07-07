@@ -1,44 +1,11 @@
 using System.Numerics;
-using System.Security.Authentication.ExtendedProtection;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
 
 namespace RenderyThing.OpenGL;
 
 public unsafe sealed class OpenGLRenderer : Renderer
-{
-    //TODO: move to files!
-    const string vertSource = 
-    @"
-        #version 330 core //Using version GLSL version 3.3
-        layout (location = 0) in vec4 vPos;
-        
-        uniform mat4 model;
-        uniform mat4 projection;
-        
-        out vec2 texCoord;
-        void main()
-        {
-            texCoord = vPos.xy;
-            gl_Position = projection * model * vec4(vPos.xy, 0.0, 1.0);
-        }
-    ";
-
-    const string fragSource = 
-    @"
-        #version 330 core
-        in vec2 texCoord;
-
-        uniform sampler2D texture1;
-        uniform vec4 color;
-
-        out vec4 fragColor;
-        void main()
-        {
-            fragColor = color * texture(texture1, texCoord);
-        }
-    ";
-    
+{   
     static readonly float[] quadVertices = 
     {
     //  X     Y    
@@ -51,16 +18,54 @@ public unsafe sealed class OpenGLRenderer : Renderer
         1.0f, 0.0f, 
     };
     readonly GL _gl;
+
     readonly uint _quadVao;
     readonly uint _quadVbo;
-    readonly uint _shader;
+    readonly uint _texQuadProgram;
+    readonly uint _solidProgram;
+    
+    Stream GetResStream(string path) => GetType().Assembly.GetManifestResourceStream($"RenderyThing.OpenGL.{path}") ?? throw new Exception($"{path} not found");
 
-    readonly int _modelUniform;
-    readonly int _projectionUniform;
-    readonly int _colorUniform;
+    uint CreateShader(ShaderType type, string source)
+    {
+        var shader = _gl.CreateShader(type);
+        _gl.ShaderSource(shader, source);
+        _gl.CompileShader(shader);
+        var info = _gl.GetShaderInfoLog(shader);
+        if(info != "") 
+            throw new Exception("shader compilation failed: " + info);
+        return shader;
+    }
+
+    uint LinkProgram(uint vertex, uint fragment)
+    {
+        var program = _gl.CreateProgram();
+        _gl.AttachShader(program, vertex);
+        _gl.AttachShader(program, fragment);
+        _gl.LinkProgram(program);
+
+        _gl.GetProgram(program, ProgramPropertyARB.LinkStatus, out var status);
+        if (status == 0)
+            throw new Exception("linking of shader program failed: " + _gl.GetProgramInfoLog(program));
+        return program;
+    }
 
     public OpenGLRenderer(IWindow window) : base(window)
     {
+        //read shaders from resources
+        using Stream texQuadVS = GetResStream("Shaders.texQuad.vert"),
+            texQuadFS = GetResStream("Shaders.texQuad.frag"),
+            solidVS = GetResStream("Shaders.solidColor.vert"),
+            solidFS = GetResStream("Shaders.solidColor.frag");
+        using StreamReader texQuadVertSR = new(texQuadVS),
+            texQuadFragSR = new(texQuadFS),
+            solidVertSR = new(solidVS),
+            solidFragSR = new(solidFS);
+        var texQuadVertSrc = texQuadVertSR.ReadToEnd();
+        var texQuadFragSrc = texQuadFragSR.ReadToEnd();
+        var solidVertSrc = solidVertSR.ReadToEnd();
+        var solidFragSrc = solidFragSR.ReadToEnd();
+
         _gl = GL.GetApi(window);
         _gl.Viewport(Size);
         //generate the buffer for the quad
@@ -76,45 +81,28 @@ public unsafe sealed class OpenGLRenderer : Renderer
         _gl.BindVertexArray(_quadVao);
         
         //defines the array as having Vector2D<float>, basically
-        _gl.VertexAttribPointer(0, 4, VertexAttribPointerType.Float, false, 2 * sizeof(float), null);
+        _gl.VertexAttribPointer(0, 2, VertexAttribPointerType.Float, false, 2 * sizeof(float), null);
         _gl.EnableVertexAttribArray(0); 
 
         //create shaders
-        var vert = _gl.CreateShader(ShaderType.VertexShader);
-        _gl.ShaderSource(vert, vertSource);
-        _gl.CompileShader(vert);
-        var info = _gl.GetShaderInfoLog(vert);
-        if(info != "") 
-            throw new Exception("compilation of vertex shader failed: " + info);
+        var texVert = CreateShader(ShaderType.VertexShader, texQuadVertSrc);
+        var texFrag = CreateShader(ShaderType.FragmentShader, texQuadFragSrc);
+        var solidVert = CreateShader(ShaderType.VertexShader, solidVertSrc);
+        var solidFrag = CreateShader(ShaderType.FragmentShader, solidFragSrc);
 
-        var frag = _gl.CreateShader(ShaderType.FragmentShader);
-        _gl.ShaderSource(frag, fragSource);
-        _gl.CompileShader(frag);
-        _gl.GetShaderInfoLog(frag);
-        if(info != "") 
-            throw new Exception("compilation of fragment shader failed: " + info);
-
-        _shader = _gl.CreateProgram();
-        _gl.AttachShader(_shader, vert);
-        _gl.AttachShader(_shader, frag);
-        _gl.LinkProgram(_shader);
-
-        _gl.GetProgram(_shader, ProgramPropertyARB.LinkStatus, out var status);
-        if (status == 0)
-            throw new Exception("linking of shader program failed: " + _gl.GetProgramInfoLog(_shader));
+        _solidProgram = LinkProgram(solidVert, solidFrag);
+        _texQuadProgram = LinkProgram(texFrag, texVert);
         
-        //delete individual shaders
-        _gl.DeleteShader(vert);
-        _gl.DeleteShader(frag);
-
-        _modelUniform = _gl.GetUniformLocation(_shader, "model");
-        _projectionUniform = _gl.GetUniformLocation(_shader, "projection");
-        _colorUniform = _gl.GetUniformLocation(_shader, "color");
-        if (_modelUniform == -1 || _projectionUniform == -1 || _colorUniform == -1)
-           throw new Exception("what.");
-        
-        _gl.Uniform1(_gl.GetUniformLocation(_shader, "texture1"), 0);
+        //set some parameters with textures, apparently some drivers need this even if using with only 1 texture
+        _gl.UseProgram(_texQuadProgram);
+        _gl.Uniform1(_gl.GetUniformLocation(_texQuadProgram, "texture1"), 0);
         _gl.ActiveTexture(TextureUnit.Texture0);
+
+        //delete individual shaders
+        _gl.DeleteShader(texVert);
+        _gl.DeleteShader(texFrag);
+        _gl.DeleteShader(solidVert);
+        _gl.DeleteShader(solidFrag);
 
         _gl.Enable(EnableCap.Blend);
         _gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
@@ -135,11 +123,11 @@ public unsafe sealed class OpenGLRenderer : Renderer
         {
             throw new Exception($"invalid texture type: expected OpenGLTexture and got {texture.GetType().Name}");
         }
-        _gl.UseProgram(_shader);
+        _gl.UseProgram(_texQuadProgram);
         _gl.BindVertexArray(_quadVao);
 
         var projectionMatrix = Matrix4X4<float>.Identity * Matrix4X4.CreateOrthographicOffCenter(0f, Size.X, Size.Y, 0f, -100f, 100f);       
-        _gl.UniformMatrix4(_projectionUniform, 1, false, (float*)&projectionMatrix);
+        _gl.UniformMatrix4(_gl.GetUniformLocation(_texQuadProgram, "projection"), 1, false, (float*)&projectionMatrix);
 
         var actualSize = new Vector2D<float>(tex.Size.X * scale.X, tex.Size.Y * scale.Y);
         var modelMatrix = Matrix4X4<float>.Identity;
@@ -153,10 +141,10 @@ public unsafe sealed class OpenGLRenderer : Renderer
         modelMatrix *=
             Matrix4X4.CreateScale(actualSize.X, actualSize.Y, 1f) * 
             Matrix4X4.CreateTranslation(position.X, position.Y, 0);
-        _gl.UniformMatrix4(_modelUniform, 1, false, (float*)&modelMatrix);
+        _gl.UniformMatrix4(_gl.GetUniformLocation(_texQuadProgram, "model"), 1, false, (float*)&modelMatrix);
 
         var c = (Vector4) color;
-        _gl.Uniform4(_colorUniform, ref c);
+        _gl.Uniform4(_gl.GetUniformLocation(_texQuadProgram, "color"), ref c);
         
         tex.Use();
         _gl.DrawArrays(PrimitiveType.Triangles, 0, 6);  
@@ -170,7 +158,8 @@ public unsafe sealed class OpenGLRenderer : Renderer
 
     public override void Dispose()
     {
-        _gl.DeleteProgram(_shader);
+        _gl.DeleteProgram(_texQuadProgram);
+        _gl.DeleteProgram(_solidProgram);
         _gl.DeleteBuffer(_quadVbo);
         _gl.DeleteVertexArray(_quadVao);
         foreach(var (_, tex) in _textures)

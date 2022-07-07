@@ -1,6 +1,4 @@
-using Silk.NET.GLFW;
 using Silk.NET.OpenGL;
-using SixLabors;
 using SixLabors.ImageSharp.PixelFormats;
 
 namespace RenderyThing.OpenGL;
