@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Security.Authentication.ExtendedProtection;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
@@ -128,29 +129,37 @@ public unsafe sealed class OpenGLRenderer : Renderer
         return new OpenGLTexture(file, _gl, options);
     }
 
-    public override void Render(RenderQueue queue)
+    public override void RenderSprite(Texture texture, Vector2D<float> position, Vector2D<float> scale, float rotation, Vector4D<float> color)
     {
-        queue.Finalize(out var sprites);
+        if (texture is not OpenGLTexture tex)
+        {
+            throw new Exception($"invalid texture type: expected OpenGLTexture and got {texture.GetType().Name}");
+        }
         _gl.UseProgram(_shader);
         _gl.BindVertexArray(_quadVao);
-        var projectionMatrix = Matrix4X4<float>.Identity * Matrix4X4.CreateOrthographicOffCenter(0f, Size.X, Size.Y, 0f, -100f, 100f);
-        foreach (var sprite in sprites)
+
+        var projectionMatrix = Matrix4X4<float>.Identity * Matrix4X4.CreateOrthographicOffCenter(0f, Size.X, Size.Y, 0f, -100f, 100f);       
+        _gl.UniformMatrix4(_projectionUniform, 1, false, (float*)&projectionMatrix);
+
+        var actualSize = new Vector2D<float>(tex.Size.X * scale.X, tex.Size.Y * scale.Y);
+        var modelMatrix = Matrix4X4<float>.Identity;
+        if (rotation != 0)
         {
-            if (sprite.Texture is not OpenGLTexture tex)
-            {
-                throw new Exception("invalid texture type");
-            }
-            var modelMatrix = 
-                Matrix4X4<float>.Identity * 
-                Matrix4X4.CreateScale(tex.Size.X * sprite.Scale.X, tex.Size.Y * sprite.Scale.Y, 1f) * 
-                Matrix4X4.CreateTranslation(new Vector3D<float>(sprite.Position, 0f));
-            _gl.UniformMatrix4(_projectionUniform, 1, false, (float*)&projectionMatrix);
-            _gl.UniformMatrix4(_modelUniform, 1, false, (float*)&modelMatrix);
-            var color = (System.Numerics.Vector4) sprite.Color;
-            _gl.Uniform4(_colorUniform, ref color);
-            tex.Use();
-            _gl.DrawArrays(PrimitiveType.Triangles, 0, 6);  
+            modelMatrix *= 
+                Matrix4X4.CreateTranslation(-0.5f, -0.5f, 0) *
+                Matrix4X4.CreateRotationZ(rotation) *
+                Matrix4X4.CreateTranslation(0.5f, 0.5f, 0);        
         }
+        modelMatrix *=
+            Matrix4X4.CreateScale(actualSize.X, actualSize.Y, 1f) * 
+            Matrix4X4.CreateTranslation(position.X, position.Y, 0);
+        _gl.UniformMatrix4(_modelUniform, 1, false, (float*)&modelMatrix);
+
+        var c = (Vector4) color;
+        _gl.Uniform4(_colorUniform, ref c);
+        
+        tex.Use();
+        _gl.DrawArrays(PrimitiveType.Triangles, 0, 6);  
     }
 
     public override void Clear(Vector4D<float> color)

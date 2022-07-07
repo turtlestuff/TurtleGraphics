@@ -29,9 +29,11 @@ public abstract class Renderer : IDisposable
     protected abstract Texture CreateTexture(Stream file, TextureOptions options);
     public virtual Texture GetTexture(string name) => _textures[name];
 
+    public void RenderSprite(Texture texture, Vector2D<float> position) =>
+        RenderSprite(texture, position, Vector2D<float>.One, 0, Vector4D<float>.One);
+    public abstract void RenderSprite(Texture texture, Vector2D<float> position, Vector2D<float> scale, float rotation, Vector4D<float> color);
 
     public abstract void Clear(Vector4D<float> color);
-    public abstract void Render(RenderQueue queue);
-
+    
     public abstract void Dispose();
 }
