@@ -22,7 +22,7 @@ window.Run();
 void OnLoad()
 {
     renderer = Renderer.GetApi(window);
-    using var fs = new FileStream("turtle.png", FileMode.Open); 
+    using var fs = typeof(Program).Assembly.GetManifestResourceStream("ExampleProject.turtle.png") ?? throw new Exception("turtle.png not found");
     renderer.AddTexture(fs, "turtle", new() { ScalingType = ScalingType.NearestNeighbor });
 }
 
