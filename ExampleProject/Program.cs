@@ -35,5 +35,5 @@ void OnRender(double deltaTime)
     if (renderer is null) return;
     renderer.Clear(Color.CornflowerBlue.ToVector4());
     var tex = renderer.GetTexture("turtle");
-    renderer.RenderSprite(tex, new(300, 300), new(1), DateTime.Now.Millisecond / 1000f , Color.Red.ToVector4());
+    renderer.RenderSprite(tex, new(30, 30), new(2), DateTime.Now.Millisecond / 159.22f , Color.GreenYellow.ToVector4());
 }
