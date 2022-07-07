@@ -1,3 +1,4 @@
+using System.Numerics;
 using Silk.NET.Windowing;
 
 namespace RenderyThing;
@@ -32,7 +33,7 @@ public abstract class Renderer : IDisposable
     public void RenderSprite(Texture texture, Vector2D<float> position) =>
         RenderSprite(texture, position, Vector2D<float>.One, 0, Vector4D<float>.One);
     public abstract void RenderSprite(Texture texture, Vector2D<float> position, Vector2D<float> scale, float rotation, Vector4D<float> color);
-
+    public abstract void RenderRect(Vector2D<float> position, Vector2D<float> size, float rotation, Vector4D<float> color);
     public abstract void Clear(Vector4D<float> color);
     
     public abstract void Dispose();

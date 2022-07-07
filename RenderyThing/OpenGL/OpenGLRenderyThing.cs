@@ -8,14 +8,14 @@ public unsafe sealed class OpenGLRenderer : Renderer
 {   
     static readonly float[] quadVertices = 
     {
-    //  X     Y    
-        0.0f, 1.0f, 
-        1.0f, 0.0f, 
-        0.0f, 0.0f, 
+    //  X     Y
+        0.0f, 1.0f,
+        1.0f, 0.0f,
+        0.0f, 0.0f,
     
-        0.0f, 1.0f, 
-        1.0f, 1.0f, 
-        1.0f, 0.0f, 
+        0.0f, 1.0f,
+        1.0f, 1.0f,
+        1.0f, 0.0f,
     };
     readonly GL _gl;
 
@@ -117,6 +117,11 @@ public unsafe sealed class OpenGLRenderer : Renderer
         return new OpenGLTexture(file, _gl, options);
     }
 
+    static Matrix4X4<float> RotationFromCenterRect(float rotation) =>
+        Matrix4X4.CreateTranslation(-0.5f, -0.5f, 0) *
+        Matrix4X4.CreateRotationZ(rotation) *
+        Matrix4X4.CreateTranslation(0.5f, 0.5f, 0);
+
     public override void RenderSprite(Texture texture, Vector2D<float> position, Vector2D<float> scale, float rotation, Vector4D<float> color)
     {
         if (texture is not OpenGLTexture tex)
@@ -126,18 +131,18 @@ public unsafe sealed class OpenGLRenderer : Renderer
         _gl.UseProgram(_texQuadProgram);
         _gl.BindVertexArray(_quadVao);
 
-        var projectionMatrix = Matrix4X4<float>.Identity * Matrix4X4.CreateOrthographicOffCenter(0f, Size.X, Size.Y, 0f, -100f, 100f);       
+        //TODO: Use Uniform Buffer Objects
+        var projectionMatrix = Matrix4X4.CreateOrthographicOffCenter(0f, Size.X, Size.Y, 0f, -100f, 100f);
         _gl.UniformMatrix4(_gl.GetUniformLocation(_texQuadProgram, "projection"), 1, false, (float*)&projectionMatrix);
 
         var actualSize = new Vector2D<float>(tex.Size.X * scale.X, tex.Size.Y * scale.Y);
         var modelMatrix = Matrix4X4<float>.Identity;
+        
+        //TODO:Potential problem with non-square sizes
         if (rotation != 0)
-        {
-            modelMatrix *= 
-                Matrix4X4.CreateTranslation(-0.5f, -0.5f, 0) *
-                Matrix4X4.CreateRotationZ(rotation) *
-                Matrix4X4.CreateTranslation(0.5f, 0.5f, 0);        
-        }
+            modelMatrix *= RotationFromCenterRect(rotation);
+        
+        //TODO: Put all of this into its own function anyway
         modelMatrix *=
             Matrix4X4.CreateScale(actualSize.X, actualSize.Y, 1f) * 
             Matrix4X4.CreateTranslation(position.X, position.Y, 0);
@@ -147,6 +152,30 @@ public unsafe sealed class OpenGLRenderer : Renderer
         _gl.Uniform4(_gl.GetUniformLocation(_texQuadProgram, "color"), ref c);
         
         tex.Use();
+        _gl.DrawArrays(PrimitiveType.Triangles, 0, 6);  
+    }
+
+    public override void RenderRect(Vector2D<float> position, Vector2D<float> size, float rotation, Vector4D<float> color)
+    {
+        _gl.UseProgram(_solidProgram);
+        _gl.BindVertexArray(_quadVao);
+        //TODO: Use UBO to buffer a proj mat?
+        var projectionMatrix = Matrix4X4.CreateOrthographicOffCenter(0f, Size.X, Size.Y, 0f, -100f, 100f);
+        _gl.UniformMatrix4(_gl.GetUniformLocation(_solidProgram, "projection"), 1, false, (float*)&projectionMatrix);
+
+        var modelMatrix = Matrix4X4<float>.Identity;
+
+        if (rotation != 0)
+            modelMatrix *= RotationFromCenterRect(rotation);
+        
+        modelMatrix *=
+            Matrix4X4.CreateScale(size.X, size.Y, 1f) * 
+            Matrix4X4.CreateTranslation(position.X, position.Y, 0);
+        _gl.UniformMatrix4(_gl.GetUniformLocation(_solidProgram, "model"), 1, false, (float*)&modelMatrix);
+
+        var c = (Vector4) color;
+        _gl.Uniform4(_gl.GetUniformLocation(_solidProgram, "color"), ref c);
+        
         _gl.DrawArrays(PrimitiveType.Triangles, 0, 6);  
     }
 
