@@ -117,10 +117,24 @@ public unsafe sealed class OpenGLRenderer : Renderer
         return new OpenGLTexture(file, _gl, options);
     }
 
-    static Matrix4X4<float> RotationFromCenterRect(float rotation) =>
-        Matrix4X4.CreateTranslation(-0.5f, -0.5f, 0) *
+    static Matrix4X4<float> ModelMatrix(Vector2D<float> position, float rotation, Vector2D<float> size)
+    {
+        if (rotation == 0f)
+        {
+            return Matrix4X4.CreateScale(size.X, size.Y, 1f) * 
+            Matrix4X4.CreateTranslation(position.X, position.Y, 0);
+        }
+        else 
+        {
+            return Matrix4X4.CreateScale(size.X, size.Y, 1f) * 
+            RotationFromCenterRect(size, rotation) *
+            Matrix4X4.CreateTranslation(position.X, position.Y, 0);
+        }
+    }
+    static Matrix4X4<float> RotationFromCenterRect(Vector2D<float> size, float rotation) =>
+        Matrix4X4.CreateTranslation(-0.5f * size.X, -0.5f * size.Y, 0) *
         Matrix4X4.CreateRotationZ(rotation) *
-        Matrix4X4.CreateTranslation(0.5f, 0.5f, 0);
+        Matrix4X4.CreateTranslation(0.5f * size.X, 0.5f * size.Y, 0);
 
     public override void RenderSprite(Texture texture, Vector2D<float> position, Vector2D<float> scale, float rotation, Vector4D<float> color)
     {
@@ -136,16 +150,8 @@ public unsafe sealed class OpenGLRenderer : Renderer
         _gl.UniformMatrix4(_gl.GetUniformLocation(_texQuadProgram, "projection"), 1, false, (float*)&projectionMatrix);
 
         var actualSize = new Vector2D<float>(tex.Size.X * scale.X, tex.Size.Y * scale.Y);
-        var modelMatrix = Matrix4X4<float>.Identity;
-        
-        //TODO:Potential problem with non-square sizes
-        if (rotation != 0)
-            modelMatrix *= RotationFromCenterRect(rotation);
-        
-        //TODO: Put all of this into its own function anyway
-        modelMatrix *=
-            Matrix4X4.CreateScale(actualSize.X, actualSize.Y, 1f) * 
-            Matrix4X4.CreateTranslation(position.X, position.Y, 0);
+        var modelMatrix = ModelMatrix(position, rotation, actualSize);
+
         _gl.UniformMatrix4(_gl.GetUniformLocation(_texQuadProgram, "model"), 1, false, (float*)&modelMatrix);
 
         var c = (Vector4) color;
@@ -163,14 +169,7 @@ public unsafe sealed class OpenGLRenderer : Renderer
         var projectionMatrix = Matrix4X4.CreateOrthographicOffCenter(0f, Size.X, Size.Y, 0f, -100f, 100f);
         _gl.UniformMatrix4(_gl.GetUniformLocation(_solidProgram, "projection"), 1, false, (float*)&projectionMatrix);
 
-        var modelMatrix = Matrix4X4<float>.Identity;
-
-        if (rotation != 0)
-            modelMatrix *= RotationFromCenterRect(rotation);
-        
-        modelMatrix *=
-            Matrix4X4.CreateScale(size.X, size.Y, 1f) * 
-            Matrix4X4.CreateTranslation(position.X, position.Y, 0);
+        var modelMatrix = ModelMatrix(position, rotation, size);
         _gl.UniformMatrix4(_gl.GetUniformLocation(_solidProgram, "model"), 1, false, (float*)&modelMatrix);
 
         var c = (Vector4) color;
