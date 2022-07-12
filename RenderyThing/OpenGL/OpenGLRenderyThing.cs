@@ -107,9 +107,9 @@ public unsafe sealed class OpenGLRenderer : Renderer
         _gl.Enable(EnableCap.Blend);
         _gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
 
-        _window.Resize += size => 
+        _window.Resize += _ => 
         {
-            _gl.Viewport(size);
+            _gl.Viewport(Size); //window.FramebufferSize
         };
     }
     protected override Texture CreateTexture(Stream file, TextureOptions options)
