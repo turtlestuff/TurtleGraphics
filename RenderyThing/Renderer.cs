@@ -13,11 +13,40 @@ public abstract class Renderer : IDisposable
     
     protected IWindow _window;
 
-    public Vector2D<int> Size => _window.FramebufferSize;
+    Vector2 _cameraPosition = Vector2.Zero;
+    public Vector2 CameraPosition
+    {
+        get => _cameraPosition;
+        set 
+        {
+            _cameraPosition = value;
+            OnCameraPropertyChanged();
+        }
+    }
+    float _scale = 1f;
+    public float Scale 
+    { 
+        get => _scale; 
+        set
+        {
+            _scale = value;
+            OnCameraPropertyChanged();
+        } 
+    }
 
+    public Vector2D<int> Size => (Vector2D<int>) ((Vector2D<float>) FramebufferSize / Scale);
+    public Vector2D<int> FramebufferSize => _window.FramebufferSize;
+    
     public Renderer(IWindow window)
     {
         _window = window;
+        window.Resize += _ => OnCameraPropertyChanged();
+    }
+
+    protected event Action? CameraPropertyChanged;
+    protected virtual void OnCameraPropertyChanged()
+    {
+        CameraPropertyChanged?.Invoke();
     }
 
     public virtual Texture AddTexture(Stream file, string name, TextureOptions options)
@@ -30,11 +59,11 @@ public abstract class Renderer : IDisposable
     protected abstract Texture CreateTexture(Stream file, TextureOptions options);
     public virtual Texture GetTexture(string name) => _textures[name];
 
-    public void RenderSprite(Texture texture, Vector2D<float> position) =>
-        RenderSprite(texture, position, Vector2D<float>.One, 0, Vector4D<float>.One);
-    public abstract void RenderSprite(Texture texture, Vector2D<float> position, Vector2D<float> scale, float rotation, Vector4D<float> color);
-    public abstract void RenderRect(Vector2D<float> position, Vector2D<float> size, float rotation, Vector4D<float> color);
-    public abstract void Clear(Vector4D<float> color);
+    public void RenderSprite(Texture texture, Vector2 position) =>
+        RenderSprite(texture, position, Vector2.One, 0, Vector4.One);
+    public abstract void RenderSprite(Texture texture, Vector2 position, Vector2 scale, float rotation, Vector4 color);
+    public abstract void RenderRect(Vector2 position, Vector2 size, float rotation, Vector4 color);
+    public abstract void Clear(Vector4 color);
     
     public abstract void Dispose();
 }

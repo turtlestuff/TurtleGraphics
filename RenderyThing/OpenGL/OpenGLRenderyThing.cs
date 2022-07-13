@@ -24,7 +24,8 @@ public unsafe sealed class OpenGLRenderer : Renderer
     readonly uint _texQuadProgram;
     readonly uint _solidProgram;
     
-    Stream GetResStream(string path) => GetType().Assembly.GetManifestResourceStream($"RenderyThing.OpenGL.{path}") ?? throw new Exception($"{path} not found");
+    Stream GetResStream(string path) => 
+        GetType().Assembly.GetManifestResourceStream($"RenderyThing.OpenGL.{path}") ?? throw new Exception($"{path} not found");
 
     uint CreateShader(ShaderType type, string source)
     {
@@ -67,7 +68,7 @@ public unsafe sealed class OpenGLRenderer : Renderer
         var solidFragSrc = solidFragSR.ReadToEnd();
 
         _gl = GL.GetApi(window);
-        _gl.Viewport(Size);
+        _gl.Viewport(FramebufferSize);
         //generate the buffer for the quad
         _quadVao = _gl.GenVertexArray();
         _quadVbo = _gl.GenBuffer();
@@ -80,7 +81,7 @@ public unsafe sealed class OpenGLRenderer : Renderer
 
         _gl.BindVertexArray(_quadVao);
         
-        //defines the array as having Vector2D<float>, basically
+        //defines the array as having Vector2, basically
         _gl.VertexAttribPointer(0, 2, VertexAttribPointerType.Float, false, 2 * sizeof(float), null);
         _gl.EnableVertexAttribArray(0); 
 
@@ -107,9 +108,9 @@ public unsafe sealed class OpenGLRenderer : Renderer
         _gl.Enable(EnableCap.Blend);
         _gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
 
-        _window.Resize += _ => 
+        _window.Resize += size => 
         {
-            _gl.Viewport(Size); //window.FramebufferSize
+            _gl.Viewport(FramebufferSize);
         };
     }
     protected override Texture CreateTexture(Stream file, TextureOptions options)
@@ -117,26 +118,26 @@ public unsafe sealed class OpenGLRenderer : Renderer
         return new OpenGLTexture(file, _gl, options);
     }
 
-    static Matrix4X4<float> ModelMatrix(Vector2D<float> position, float rotation, Vector2D<float> size)
+    static Matrix4x4 ModelMatrix(Vector2 position, float rotation, Vector2 size)
     {
         if (rotation == 0f)
         {
-            return Matrix4X4.CreateScale(size.X, size.Y, 1f) * 
-            Matrix4X4.CreateTranslation(position.X, position.Y, 0);
+            return Matrix4x4.CreateScale(size.X, size.Y, 1f) * 
+            Matrix4x4.CreateTranslation(position.X, position.Y, 0);
         }
         else 
         {
-            return Matrix4X4.CreateScale(size.X, size.Y, 1f) * 
+            return Matrix4x4.CreateScale(size.X, size.Y, 1f) * 
             RotationFromCenterRect(size, rotation) *
-            Matrix4X4.CreateTranslation(position.X, position.Y, 0);
+            Matrix4x4.CreateTranslation(position.X, position.Y, 0);
         }
     }
-    static Matrix4X4<float> RotationFromCenterRect(Vector2D<float> size, float rotation) =>
-        Matrix4X4.CreateTranslation(-0.5f * size.X, -0.5f * size.Y, 0) *
-        Matrix4X4.CreateRotationZ(rotation) *
-        Matrix4X4.CreateTranslation(0.5f * size.X, 0.5f * size.Y, 0);
+    static Matrix4x4 RotationFromCenterRect(Vector2 size, float rotation) =>
+        Matrix4x4.CreateTranslation(-0.5f * size.X, -0.5f * size.Y, 0) *
+        Matrix4x4.CreateRotationZ(rotation) *
+        Matrix4x4.CreateTranslation(0.5f * size.X, 0.5f * size.Y, 0);
 
-    public override void RenderSprite(Texture texture, Vector2D<float> position, Vector2D<float> scale, float rotation, Vector4D<float> color)
+    public override void RenderSprite(Texture texture, Vector2 position, Vector2 scale, float rotation, Vector4 color)
     {
         if (texture is not OpenGLTexture tex)
         {
@@ -149,19 +150,18 @@ public unsafe sealed class OpenGLRenderer : Renderer
         var projectionMatrix = Matrix4X4.CreateOrthographicOffCenter(0f, Size.X, Size.Y, 0f, -100f, 100f);
         _gl.UniformMatrix4(_gl.GetUniformLocation(_texQuadProgram, "projection"), 1, false, (float*)&projectionMatrix);
 
-        var actualSize = new Vector2D<float>(tex.Size.X * scale.X, tex.Size.Y * scale.Y);
+        var actualSize = new Vector2(tex.Size.X * scale.X, tex.Size.Y * scale.Y);
         var modelMatrix = ModelMatrix(position, rotation, actualSize);
 
         _gl.UniformMatrix4(_gl.GetUniformLocation(_texQuadProgram, "model"), 1, false, (float*)&modelMatrix);
 
-        var c = (Vector4) color;
-        _gl.Uniform4(_gl.GetUniformLocation(_texQuadProgram, "color"), ref c);
+        _gl.Uniform4(_gl.GetUniformLocation(_texQuadProgram, "color"), ref color);
         
         tex.Use();
         _gl.DrawArrays(PrimitiveType.Triangles, 0, 6);  
     }
 
-    public override void RenderRect(Vector2D<float> position, Vector2D<float> size, float rotation, Vector4D<float> color)
+    public override void RenderRect(Vector2 position, Vector2 size, float rotation, Vector4 color)
     {
         _gl.UseProgram(_solidProgram);
         _gl.BindVertexArray(_quadVao);
@@ -172,15 +172,14 @@ public unsafe sealed class OpenGLRenderer : Renderer
         var modelMatrix = ModelMatrix(position, rotation, size);
         _gl.UniformMatrix4(_gl.GetUniformLocation(_solidProgram, "model"), 1, false, (float*)&modelMatrix);
 
-        var c = (Vector4) color;
-        _gl.Uniform4(_gl.GetUniformLocation(_solidProgram, "color"), ref c);
+        _gl.Uniform4(_gl.GetUniformLocation(_solidProgram, "color"), ref color);
         
         _gl.DrawArrays(PrimitiveType.Triangles, 0, 6);  
     }
 
-    public override void Clear(Vector4D<float> color)
+    public override void Clear(Vector4 color)
     {
-        _gl.ClearColor(color * 255);
+        _gl.ClearColor(color.X, color.Y, color.Z, color.W);
         _gl.Clear(ClearBufferMask.ColorBufferBit);
     }
 

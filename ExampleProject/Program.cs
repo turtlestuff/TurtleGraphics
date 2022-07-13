@@ -1,17 +1,19 @@
-﻿using System.Diagnostics;
-using System.Drawing;
+﻿using System.Drawing;
+using System.Numerics;
 using RenderyThing;
-using Silk.NET.Maths;
+using Silk.NET.Input;
 using Silk.NET.Windowing;
+
 var numTurtles = 1000;
 IWindow window;
 Renderer? renderer = null;
-var turtles = new (Vector2D<float> Pos, Vector4D<float> Col, Vector2D<float> Dir)[numTurtles]; 
+var turtles = new (Vector2 Pos, Vector4 Col, Vector2 Dir)[numTurtles]; 
 
 var options = WindowOptions.Default;
-options.Size = new(1280, 720);
+options.Size = new(800, 600);
 options.Title = "RenderyThing testing project";
 
+options.FramesPerSecond = 60;
 window = Window.Create(options);
 
 window.Load += OnLoad;
@@ -32,8 +34,8 @@ void OnLoad()
         var x = Random.Shared.Next(0, renderer.Size.X - tex.Size.X);
         var y = Random.Shared.Next(0, renderer.Size.Y - tex.Size.Y);
         var col = Color.FromArgb((int) ((uint) Random.Shared.Next() | 0xFF000000)).ToVector4();
-        var mov = new Vector2D<float>(Random.Shared.NextSingle(), Random.Shared.NextSingle()) *
-            (Random.Shared.NextSingle() - 0.5f) * 10; 
+        var mov = new Vector2(Random.Shared.NextSingle(), Random.Shared.NextSingle()) *
+            (Random.Shared.NextSingle() - 0.5f) * 10;
         turtles[i] = (new(x, y), col, mov);
     }
 }
@@ -42,6 +44,13 @@ void OnUpdate(double deltaTime)
 {
     if (renderer is null) return;
     var tex = renderer.GetTexture("turtle");
+
+    var input = window.CreateInput();
+    var mouse = input.Mice[0];
+    if (mouse.IsButtonPressed(MouseButton.Left))
+    {
+        renderer.Scale = (Math.Clamp(mouse.Position.X, 0, window.Size.X) / window.Size.X) + 1;
+    }
 
     for (var i = 0; i < numTurtles; i++)
     {
@@ -56,8 +65,7 @@ void OnUpdate(double deltaTime)
 
 void OnRender(double deltaTime)
 {
-    var now = new Stopwatch();
-    now.Start();
+
     if (renderer is null) return;
     renderer.Clear(Color.CornflowerBlue.ToVector4());
     var tex = renderer.GetTexture("turtle");
@@ -65,7 +73,6 @@ void OnRender(double deltaTime)
     for (var i = 0; i < numTurtles; i++)
     {
         ref var turtle = ref turtles[i];
-        renderer.RenderSprite(tex, turtle.Pos, Vector2D<float>.One, 0, turtle.Col);
+        renderer.RenderSprite(tex, turtle.Pos, Vector2.One, 0, turtle.Col);
     }
-    Console.WriteLine(now.Elapsed.TotalMilliseconds);
 }

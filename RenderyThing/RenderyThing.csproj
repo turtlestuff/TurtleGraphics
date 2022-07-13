@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <Using Include="Silk.NET.Maths" />
+    <Using Include="System.Numerics" />
   </ItemGroup>
 
   <ItemGroup>
