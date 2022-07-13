@@ -7,13 +7,11 @@ using Silk.NET.Windowing;
 var numTurtles = 1000;
 IWindow window;
 Renderer? renderer = null;
-var turtles = new (Vector2 Pos, Vector4 Col, Vector2 Dir)[numTurtles]; 
+var turtles = new (Vector2 Pos, float Angle, Vector4 Col, Vector2 Dir, float Rot)[numTurtles]; 
 
 var options = WindowOptions.Default;
 options.Size = new(800, 600);
 options.Title = "RenderyThing testing project";
-
-options.FramesPerSecond = 60;
 window = Window.Create(options);
 
 window.Load += OnLoad;
@@ -35,8 +33,9 @@ void OnLoad()
         var y = Random.Shared.Next(0, renderer.Size.Y - tex.Size.Y);
         var col = Color.FromArgb((int) ((uint) Random.Shared.Next() | 0xFF000000)).ToVector4();
         var mov = new Vector2(Random.Shared.NextSingle(), Random.Shared.NextSingle()) *
-            (Random.Shared.NextSingle() - 0.5f) * 10;
-        turtles[i] = (new(x, y), col, mov);
+            (Random.Shared.NextSingle() - 0.5f) * 10f;
+        var rot = (Random.Shared.NextSingle() - 0.5f) * 0.5f;
+        turtles[i] = (new(x, y), 0f, col, mov, rot);
     }
 }
 
@@ -60,6 +59,7 @@ void OnUpdate(double deltaTime)
             turtle.Dir.X *= -1;
         if (turtle.Pos.Y < 0 || turtle.Pos.Y > renderer.Size.Y - tex.Size.Y)
             turtle.Dir.Y *= -1;
+        turtle.Angle = MathF.IEEERemainder(turtle.Angle + turtle.Rot, MathF.Tau);
     }
 }
 
@@ -69,10 +69,10 @@ void OnRender(double deltaTime)
     if (renderer is null) return;
     renderer.Clear(Color.CornflowerBlue.ToVector4());
     var tex = renderer.GetTexture("turtle");
-
     for (var i = 0; i < numTurtles; i++)
     {
         ref var turtle = ref turtles[i];
-        renderer.RenderSprite(tex, turtle.Pos, Vector2.One, 0, turtle.Col);
+        renderer.RenderSprite(tex, turtle.Pos, Vector2.One, turtle.Angle, turtle.Col);
     }
+
 }

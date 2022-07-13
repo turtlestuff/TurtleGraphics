@@ -27,6 +27,8 @@ public unsafe sealed class OpenGLRenderer : Renderer
     Stream GetResStream(string path) => 
         GetType().Assembly.GetManifestResourceStream($"RenderyThing.OpenGL.{path}") ?? throw new Exception($"{path} not found");
 
+
+    Matrix4x4 _projectionMatrix;
     uint CreateShader(ShaderType type, string source)
     {
         var shader = _gl.CreateShader(type);
@@ -112,6 +114,9 @@ public unsafe sealed class OpenGLRenderer : Renderer
         {
             _gl.Viewport(FramebufferSize);
         };
+
+        UpdateProjectionMatrix();
+        CameraPropertyChanged += UpdateProjectionMatrix;
     }
     protected override Texture CreateTexture(Stream file, TextureOptions options)
     {
@@ -137,6 +142,14 @@ public unsafe sealed class OpenGLRenderer : Renderer
         Matrix4x4.CreateRotationZ(rotation) *
         Matrix4x4.CreateTranslation(0.5f * size.X, 0.5f * size.Y, 0);
 
+    void UpdateProjectionMatrix()
+    {
+        _projectionMatrix = Matrix4x4.CreateOrthographicOffCenter(
+            left: CameraPosition.X, right: Size.X + CameraPosition.X, 
+            top: CameraPosition.Y, bottom: Size.Y + CameraPosition.Y, 
+            zNearPlane: -1f, zFarPlane: 1f);
+    }
+
     public override void RenderSprite(Texture texture, Vector2 position, Vector2 scale, float rotation, Vector4 color)
     {
         if (texture is not OpenGLTexture tex)
@@ -147,7 +160,7 @@ public unsafe sealed class OpenGLRenderer : Renderer
         _gl.BindVertexArray(_quadVao);
 
         //TODO: Use Uniform Buffer Objects
-        var projectionMatrix = Matrix4X4.CreateOrthographicOffCenter(0f, Size.X, Size.Y, 0f, -100f, 100f);
+        var projectionMatrix = _projectionMatrix;
         _gl.UniformMatrix4(_gl.GetUniformLocation(_texQuadProgram, "projection"), 1, false, (float*)&projectionMatrix);
 
         var actualSize = new Vector2(tex.Size.X * scale.X, tex.Size.Y * scale.Y);
@@ -166,7 +179,7 @@ public unsafe sealed class OpenGLRenderer : Renderer
         _gl.UseProgram(_solidProgram);
         _gl.BindVertexArray(_quadVao);
         //TODO: Use UBO to buffer a proj mat?
-        var projectionMatrix = Matrix4X4.CreateOrthographicOffCenter(0f, Size.X, Size.Y, 0f, -100f, 100f);
+        var projectionMatrix = _projectionMatrix;
         _gl.UniformMatrix4(_gl.GetUniformLocation(_solidProgram, "projection"), 1, false, (float*)&projectionMatrix);
 
         var modelMatrix = ModelMatrix(position, rotation, size);
