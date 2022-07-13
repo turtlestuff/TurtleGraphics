@@ -144,10 +144,7 @@ public unsafe sealed class OpenGLRenderer : Renderer
 
     void UpdateProjectionMatrix()
     {
-        _projectionMatrix = Matrix4x4.CreateOrthographicOffCenter(
-            left: CameraPosition.X, right: Size.X + CameraPosition.X, 
-            top: CameraPosition.Y, bottom: Size.Y + CameraPosition.Y, 
-            zNearPlane: -1f, zFarPlane: 1f);
+        _projectionMatrix = Matrix4x4.CreateOrthographicOffCenter(left: 0, right: Size.X, top: 0,  bottom: Size.Y, zNearPlane: -1f, zFarPlane: 1f);
     }
 
     public override void RenderSprite(Texture texture, Vector2 position, Vector2 scale, float rotation, Vector4 color)

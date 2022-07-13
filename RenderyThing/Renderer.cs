@@ -13,16 +13,6 @@ public abstract class Renderer : IDisposable
     
     protected IWindow _window;
 
-    Vector2 _cameraPosition = Vector2.Zero;
-    public Vector2 CameraPosition
-    {
-        get => _cameraPosition;
-        set 
-        {
-            _cameraPosition = value;
-            OnCameraPropertyChanged();
-        }
-    }
     float _scale = 1f;
     public float Scale 
     { 
