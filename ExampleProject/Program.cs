@@ -1,4 +1,4 @@
-﻿using System.Drawing;
+using System.Drawing;
 using System.Numerics;
 using RenderyThing;
 using Silk.NET.Input;
@@ -26,12 +26,12 @@ void OnLoad()
 
     for (var i = 0; i < numTurtles; i++)
     {
-        var x = Random.Shared.Next(0, worldSize);
-        var y = Random.Shared.Next(0, worldSize);
+        var x = Random.Shared.Next(tex.Size.X, worldSize - tex.Size.X);
+        var y = Random.Shared.Next(tex.Size.Y, worldSize - tex.Size.Y);
         var col = Color.FromArgb((int) ((uint) Random.Shared.Next() | 0xFF000000)).ToVector4();
-        var mov = new Vector2(Random.Shared.NextSingle(), Random.Shared.NextSingle()) *
-            (Random.Shared.NextSingle() - 0.5f) * 10f;
-        var rot = (Random.Shared.NextSingle() - 0.5f) * 0.5f;
+        var mov = new Vector2(Random.Shared.NextSingle() - 0.5f, Random.Shared.NextSingle() - 0.5f) *
+            Random.Shared.NextSingle() * 10f * 60f;
+        var rot = (Random.Shared.NextSingle() - 0.5f) * 0.5f * 60f;
         turtles[i] = (new(x, y), 0f, col, mov, rot);
     }
 
@@ -44,6 +44,7 @@ var lastMousePos = Vector2.Zero;
 
 void OnUpdate(double deltaTime)
 {
+    var dT = (float) deltaTime;
     var tex = renderer.GetTexture("turtle");
 
     var mouse = input.Mice[0];
@@ -69,19 +70,27 @@ void OnUpdate(double deltaTime)
     for (var i = 0; i < numTurtles; i++)
     {
         ref var turtle = ref turtles[i];
-        if (turtle.Pos.X < 0 || turtle.Pos.X > worldSize)
+        turtle.Pos += turtle.Dir * dT;
+        if (turtle.Pos.X < 0 || turtle.Pos.X > worldSize - tex.Size.X)
+        {
             turtle.Dir.X *= -1;
-        if (turtle.Pos.Y < 0 || turtle.Pos.Y > worldSize)
+            turtle.Pos += turtle.Dir * dT;
+        }
+        if (turtle.Pos.Y < 0 || turtle.Pos.Y > worldSize - tex.Size.Y)
+        {
             turtle.Dir.Y *= -1;
-        turtle.Pos += turtle.Dir;
-        turtle.Angle = MathF.IEEERemainder(turtle.Angle + turtle.Rot, MathF.Tau);
+            turtle.Pos += turtle.Dir * dT;
+
+        }
+        turtle.Angle = MathF.IEEERemainder(turtle.Angle + turtle.Rot * dT, MathF.Tau);
     }
 }
 
 void OnRender(double deltaTime)
 {
-    renderer.Clear(Color.CornflowerBlue.ToVector4());
+    renderer.Clear(Color.Black.ToVector4());
     var tex = renderer.GetTexture("turtle");
+    renderer.RenderRect(-camera, new(worldSize), 0, Color.CornflowerBlue.ToVector4());
     for (var i = 0; i < numTurtles; i++)
     {
         ref var turtle = ref turtles[i];
