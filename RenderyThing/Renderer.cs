@@ -1,7 +1,11 @@
-using System.Numerics;
 using Silk.NET.Windowing;
 
 namespace RenderyThing;
+
+public class RendererException : Exception
+{
+    public RendererException(string message) : base(message) {}
+}
 
 public abstract class Renderer : IDisposable
 {   

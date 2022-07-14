@@ -1,4 +1,3 @@
-using System.Numerics;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
 
@@ -21,53 +20,19 @@ public unsafe sealed class OpenGLRenderer : Renderer
 
     readonly uint _quadVao;
     readonly uint _quadVbo;
-    readonly uint _texQuadProgram;
-    readonly uint _solidProgram;
-    
-    Stream GetResStream(string path) => 
-        GetType().Assembly.GetManifestResourceStream($"RenderyThing.OpenGL.{path}") ?? throw new Exception($"{path} not found");
-
-
+    readonly GLShaderProgram _texQuadProgram;
+    readonly GLShaderProgram _solidProgram;
     Matrix4x4 _projectionMatrix;
-    uint CreateShader(ShaderType type, string source)
-    {
-        var shader = _gl.CreateShader(type);
-        _gl.ShaderSource(shader, source);
-        _gl.CompileShader(shader);
-        var info = _gl.GetShaderInfoLog(shader);
-        if(info != "") 
-            throw new Exception("shader compilation failed: " + info);
-        return shader;
-    }
 
-    uint LinkProgram(uint vertex, uint fragment)
-    {
-        var program = _gl.CreateProgram();
-        _gl.AttachShader(program, vertex);
-        _gl.AttachShader(program, fragment);
-        _gl.LinkProgram(program);
-
-        _gl.GetProgram(program, ProgramPropertyARB.LinkStatus, out var status);
-        if (status == 0)
-            throw new Exception("linking of shader program failed: " + _gl.GetProgramInfoLog(program));
-        return program;
-    }
+    Stream GetResStream(string path) => 
+        GetType().Assembly.GetManifestResourceStream($"RenderyThing.OpenGL.{path}") ?? throw new FileNotFoundException($"{path} not found");
 
     public OpenGLRenderer(IWindow window) : base(window)
     {
-        //read shaders from resources
         using Stream texQuadVS = GetResStream("Shaders.texQuad.vert"),
             texQuadFS = GetResStream("Shaders.texQuad.frag"),
             solidVS = GetResStream("Shaders.solidColor.vert"),
             solidFS = GetResStream("Shaders.solidColor.frag");
-        using StreamReader texQuadVertSR = new(texQuadVS),
-            texQuadFragSR = new(texQuadFS),
-            solidVertSR = new(solidVS),
-            solidFragSR = new(solidFS);
-        var texQuadVertSrc = texQuadVertSR.ReadToEnd();
-        var texQuadFragSrc = texQuadFragSR.ReadToEnd();
-        var solidVertSrc = solidVertSR.ReadToEnd();
-        var solidFragSrc = solidFragSR.ReadToEnd();
 
         _gl = GL.GetApi(window);
         _gl.Viewport(FramebufferSize);
@@ -88,24 +53,13 @@ public unsafe sealed class OpenGLRenderer : Renderer
         _gl.EnableVertexAttribArray(0); 
 
         //create shaders
-        var texVert = CreateShader(ShaderType.VertexShader, texQuadVertSrc);
-        var texFrag = CreateShader(ShaderType.FragmentShader, texQuadFragSrc);
-        var solidVert = CreateShader(ShaderType.VertexShader, solidVertSrc);
-        var solidFrag = CreateShader(ShaderType.FragmentShader, solidFragSrc);
+        _texQuadProgram = new GLShaderProgram(_gl, texQuadVS, texQuadFS);
+        _solidProgram = new GLShaderProgram(_gl, solidVS, solidFS);
 
-        _solidProgram = LinkProgram(solidVert, solidFrag);
-        _texQuadProgram = LinkProgram(texFrag, texVert);
-        
         //set some parameters with textures, apparently some drivers need this even if using with only 1 texture
-        _gl.UseProgram(_texQuadProgram);
-        _gl.Uniform1(_gl.GetUniformLocation(_texQuadProgram, "texture1"), 0);
+        _texQuadProgram.Use();
+        _gl.Uniform1(_gl.GetUniformLocation(_texQuadProgram.Handle, "texture1"), 0);
         _gl.ActiveTexture(TextureUnit.Texture0);
-
-        //delete individual shaders
-        _gl.DeleteShader(texVert);
-        _gl.DeleteShader(texFrag);
-        _gl.DeleteShader(solidVert);
-        _gl.DeleteShader(solidFrag);
 
         _gl.Enable(EnableCap.Blend);
         _gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
@@ -118,6 +72,7 @@ public unsafe sealed class OpenGLRenderer : Renderer
         UpdateProjectionMatrix();
         CameraPropertyChanged += UpdateProjectionMatrix;
     }
+
     protected override Texture CreateTexture(Stream file, TextureOptions options)
     {
         return new OpenGLTexture(file, _gl, options);
@@ -137,6 +92,7 @@ public unsafe sealed class OpenGLRenderer : Renderer
             Matrix4x4.CreateTranslation(position.X, position.Y, 0);
         }
     }
+
     static Matrix4x4 RotationFromCenterRect(Vector2 size, float rotation) =>
         Matrix4x4.CreateTranslation(-0.5f * size.X, -0.5f * size.Y, 0) *
         Matrix4x4.CreateRotationZ(rotation) *
@@ -145,6 +101,10 @@ public unsafe sealed class OpenGLRenderer : Renderer
     void UpdateProjectionMatrix()
     {
         _projectionMatrix = Matrix4x4.CreateOrthographicOffCenter(left: 0, right: Size.X, top: 0,  bottom: Size.Y, zNearPlane: -1f, zFarPlane: 1f);
+        _texQuadProgram.Use();
+        _texQuadProgram.SetProjection(_projectionMatrix);
+        _solidProgram.Use();
+        _solidProgram.SetProjection(_projectionMatrix);
     }
 
     public override void RenderSprite(Texture texture, Vector2 position, Vector2 scale, float rotation, Vector4 color)
@@ -153,19 +113,13 @@ public unsafe sealed class OpenGLRenderer : Renderer
         {
             throw new Exception($"invalid texture type: expected OpenGLTexture and got {texture.GetType().Name}");
         }
-        _gl.UseProgram(_texQuadProgram);
+        _texQuadProgram.Use();
         _gl.BindVertexArray(_quadVao);
-
-        //TODO: Use Uniform Buffer Objects
-        var projectionMatrix = _projectionMatrix;
-        _gl.UniformMatrix4(_gl.GetUniformLocation(_texQuadProgram, "projection"), 1, false, (float*)&projectionMatrix);
 
         var actualSize = new Vector2(tex.Size.X * scale.X, tex.Size.Y * scale.Y);
         var modelMatrix = ModelMatrix(position, rotation, actualSize);
-
-        _gl.UniformMatrix4(_gl.GetUniformLocation(_texQuadProgram, "model"), 1, false, (float*)&modelMatrix);
-
-        _gl.Uniform4(_gl.GetUniformLocation(_texQuadProgram, "color"), ref color);
+        _texQuadProgram.SetModel(modelMatrix);
+        _texQuadProgram.SetColor(ref color);
         
         tex.Use();
         _gl.DrawArrays(PrimitiveType.Triangles, 0, 6);  
@@ -173,18 +127,14 @@ public unsafe sealed class OpenGLRenderer : Renderer
 
     public override void RenderRect(Vector2 position, Vector2 size, float rotation, Vector4 color)
     {
-        _gl.UseProgram(_solidProgram);
+        _solidProgram.Use();
         _gl.BindVertexArray(_quadVao);
-        //TODO: Use UBO to buffer a proj mat?
-        var projectionMatrix = _projectionMatrix;
-        _gl.UniformMatrix4(_gl.GetUniformLocation(_solidProgram, "projection"), 1, false, (float*)&projectionMatrix);
 
         var modelMatrix = ModelMatrix(position, rotation, size);
-        _gl.UniformMatrix4(_gl.GetUniformLocation(_solidProgram, "model"), 1, false, (float*)&modelMatrix);
-
-        _gl.Uniform4(_gl.GetUniformLocation(_solidProgram, "color"), ref color);
+        _solidProgram.SetModel(modelMatrix);
+        _solidProgram.SetColor(ref color);
         
-        _gl.DrawArrays(PrimitiveType.Triangles, 0, 6);  
+        _gl.DrawArrays(PrimitiveType.Triangles, 0, 6);
     }
 
     public override void Clear(Vector4 color)
@@ -195,8 +145,8 @@ public unsafe sealed class OpenGLRenderer : Renderer
 
     public override void Dispose()
     {
-        _gl.DeleteProgram(_texQuadProgram);
-        _gl.DeleteProgram(_solidProgram);
+        _texQuadProgram.Dispose();
+        _solidProgram.Dispose();
         _gl.DeleteBuffer(_quadVbo);
         _gl.DeleteVertexArray(_quadVao);
         foreach(var (_, tex) in _textures)

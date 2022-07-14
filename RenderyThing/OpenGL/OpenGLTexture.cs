@@ -23,8 +23,8 @@ public unsafe sealed class OpenGLTexture : Texture
         var scaleFilter = (int) (Options.ScalingType == ScalingType.Linear ? GLEnum.Linear : GLEnum.Nearest);
         _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, scaleFilter);
         _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, scaleFilter);
-        Size = new(img.Width, img.Height);
         
+        Size = new(img.Width, img.Height);
     }
        
     

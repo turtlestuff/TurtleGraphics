@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Drawing;
 using System.Numerics;
 using RenderyThing;
@@ -60,6 +61,7 @@ void OnUpdate(double deltaTime)
             dragging = true;
         }
         lastMousePos = mouse.Position;
+        return; //Pause turtle movement while scrolling
     }
     else
     {
@@ -88,6 +90,8 @@ void OnUpdate(double deltaTime)
 
 void OnRender(double deltaTime)
 {
+    var stopwatch = new Stopwatch();
+    stopwatch.Start();
     renderer.Clear(Color.Black.ToVector4());
     var tex = renderer.GetTexture("turtle");
     renderer.RenderRect(-camera, new(worldSize), 0, Color.CornflowerBlue.ToVector4());
@@ -96,11 +100,18 @@ void OnRender(double deltaTime)
         ref var turtle = ref turtles[i];
         renderer.RenderSprite(tex, turtle.Pos - camera, Vector2.One, turtle.Angle, turtle.Col);
     }
+    stopwatch.Stop();
+    Console.CursorLeft = 0;
+    Console.Write($"render time: {stopwatch.Elapsed.TotalMilliseconds:F3} ms | frame rate: {1/deltaTime:F3} FPS");
+}
+
+void OnClosing()
+{
+    renderer.Dispose();
 }
 
 window.Load += OnLoad;
 window.Update += OnUpdate;
 window.Render += OnRender;
-
+window.Closing += OnClosing;
 window.Run();
-
