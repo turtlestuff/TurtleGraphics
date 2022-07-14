@@ -5,6 +5,10 @@ using RenderyThing;
 using Silk.NET.Input;
 using Silk.NET.Windowing;
 
+var avgOver = 16;
+var renderTimes = new double[avgOver];
+var frameRates = new double[avgOver];
+var avgIndex = 0;
 var numTurtles = 1000;
 var worldSize = 1000;
 var camera = Vector2.Zero;
@@ -102,11 +106,18 @@ void OnRender(double deltaTime)
     }
     stopwatch.Stop();
     Console.CursorLeft = 0;
-    Console.Write($"render time: {stopwatch.Elapsed.TotalMilliseconds:F3} ms | frame rate: {1/deltaTime:F3} FPS");
+    renderTimes[avgIndex] = stopwatch.Elapsed.TotalMilliseconds;
+    frameRates[avgIndex++] = 1 / deltaTime;
+    if (avgIndex == avgOver)
+    {   
+        Console.Write($"render time: {renderTimes.Average():F3} ms | frame rate: {frameRates.Average():F3} FPS (avg. over {avgOver} frames)");
+        avgIndex = 0;
+    }
 }
 
 void OnClosing()
 {
+    Console.WriteLine();
     renderer.Dispose();
 }
 
