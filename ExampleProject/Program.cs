@@ -1,11 +1,12 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Drawing;
 using System.Numerics;
 using RenderyThing;
+using Silk.NET.Core;
 using Silk.NET.Input;
 using Silk.NET.Windowing;
 
-var avgOver = 16;
+var avgOver = 60;
 var renderTimes = new double[avgOver];
 var frameRates = new double[avgOver];
 var avgIndex = 0;
@@ -21,8 +22,8 @@ var turtles = new (Vector2 Pos, float Angle, Vector4 Col, Vector2 Dir, float Rot
 var options = WindowOptions.Default;
 options.Size = new(800, 600);
 options.Title = "RenderyThing Test Project";
-window = Window.Create(options);
 
+window = Window.Create(options);
 void OnLoad()
 {
     renderer = Renderer.GetApi(window);
@@ -41,7 +42,7 @@ void OnLoad()
     }
 
     input = window.CreateInput();
-    input.Mice[0].Scroll += (mouse, wheel) => { renderer.Scale += wheel.Y * 0.2f; };
+    input.Mice[0].Scroll += (mouse, wheel) => { renderer.Scale = Math.Clamp(renderer.Scale + wheel.Y * 0.2f, 0.2f, 4f); };
 }
 
 var dragging = false;
@@ -105,12 +106,11 @@ void OnRender(double deltaTime)
         renderer.RenderSprite(tex, turtle.Pos - camera, Vector2.One, turtle.Angle, turtle.Col);
     }
     stopwatch.Stop();
-    Console.CursorLeft = 0;
     renderTimes[avgIndex] = stopwatch.Elapsed.TotalMilliseconds;
     frameRates[avgIndex++] = 1 / deltaTime;
     if (avgIndex == avgOver)
     {   
-        Console.Write($"render time: {renderTimes.Average():F3} ms | frame rate: {frameRates.Average():F3} FPS (avg. over {avgOver} frames)");
+        Console.WriteLine($"render time: {renderTimes.Average():F3} ms | frame rate: {frameRates.Average():F3} FPS (avg. over {avgOver} frames)");
         avgIndex = 0;
     }
 }

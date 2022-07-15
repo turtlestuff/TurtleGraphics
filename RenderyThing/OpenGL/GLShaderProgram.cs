@@ -48,9 +48,9 @@ unsafe readonly struct GLShaderProgram : IDisposable
         Handle = prog;
     }
     
-    public void SetModel(Matrix4x4 matrix) => _gl.UniformMatrix4(_modelMatrixLocation, 1, false, (float*) &matrix);
-    public void SetProjection(Matrix4x4 matrix) => _gl.UniformMatrix4(_projMatrixLocation, 1, false, (float*) &matrix);
-    public void SetColor(ref Vector4 col) => _gl.Uniform4(_colorLocation, col);
+    public void SetModel(Matrix4x4* matrix) => _gl.UniformMatrix4(_modelMatrixLocation, 1, false, (float*) matrix);
+    public void SetProjection(Matrix4x4* matrix) => _gl.UniformMatrix4(_projMatrixLocation, 1, false, (float*) matrix);
+    public void SetColor(ref Vector4 col) => _gl.Uniform4(_colorLocation, ref col);
 
     public void Use() => _gl.UseProgram(Handle);
 

@@ -5,7 +5,7 @@ namespace RenderyThing.OpenGL;
 
 public unsafe sealed class OpenGLRenderer : Renderer
 {   
-    static readonly float[] quadVertices = 
+    static readonly float[] quadVertices =
     {
     //  X     Y
         0.0f, 1.0f,
@@ -16,6 +16,7 @@ public unsafe sealed class OpenGLRenderer : Renderer
         1.0f, 1.0f,
         1.0f, 0.0f,
     };
+
     readonly GL _gl;
 
     readonly uint _quadVao;
@@ -100,11 +101,12 @@ public unsafe sealed class OpenGLRenderer : Renderer
 
     void UpdateProjectionMatrix()
     {
-        _projectionMatrix = Matrix4x4.CreateOrthographicOffCenter(left: 0, right: Size.X, top: 0,  bottom: Size.Y, zNearPlane: -1f, zFarPlane: 1f);
+        var projectionMatrix = Matrix4x4.CreateOrthographicOffCenter(left: 0, right: Size.X, top: 0,  bottom: Size.Y, zNearPlane: -1f, zFarPlane: 1f);
         _texQuadProgram.Use();
-        _texQuadProgram.SetProjection(_projectionMatrix);
+        _texQuadProgram.SetProjection(&projectionMatrix);
         _solidProgram.Use();
-        _solidProgram.SetProjection(_projectionMatrix);
+        _solidProgram.SetProjection(&projectionMatrix);
+        _projectionMatrix = projectionMatrix;
     }
 
     public override void RenderSprite(Texture texture, Vector2 position, Vector2 scale, float rotation, Vector4 color)
@@ -118,7 +120,7 @@ public unsafe sealed class OpenGLRenderer : Renderer
 
         var actualSize = new Vector2(tex.Size.X * scale.X, tex.Size.Y * scale.Y);
         var modelMatrix = ModelMatrix(position, rotation, actualSize);
-        _texQuadProgram.SetModel(modelMatrix);
+        _texQuadProgram.SetModel(&modelMatrix);
         _texQuadProgram.SetColor(ref color);
         
         tex.Use();
@@ -131,7 +133,7 @@ public unsafe sealed class OpenGLRenderer : Renderer
         _gl.BindVertexArray(_quadVao);
 
         var modelMatrix = ModelMatrix(position, rotation, size);
-        _solidProgram.SetModel(modelMatrix);
+        _solidProgram.SetModel(&modelMatrix);
         _solidProgram.SetColor(ref color);
         
         _gl.DrawArrays(PrimitiveType.Triangles, 0, 6);
