@@ -1,5 +1,6 @@
-using RenderyThing;
 using Silk.NET.OpenGL;
+
+namespace RenderyThing.OpenGL;
 
 unsafe readonly struct GLShaderProgram : IDisposable
 {   
