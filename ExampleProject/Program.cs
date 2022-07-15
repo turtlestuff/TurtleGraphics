@@ -2,11 +2,10 @@
 using System.Drawing;
 using System.Numerics;
 using RenderyThing;
-using Silk.NET.Core;
 using Silk.NET.Input;
 using Silk.NET.Windowing;
 
-var avgOver = 60;
+var avgOver = 16;
 var renderTimes = new double[avgOver];
 var frameRates = new double[avgOver];
 var avgIndex = 0;
@@ -24,6 +23,7 @@ options.Size = new(800, 600);
 options.Title = "RenderyThing Test Project";
 
 window = Window.Create(options);
+
 void OnLoad()
 {
     renderer = Renderer.GetApi(window);
@@ -103,8 +103,12 @@ void OnRender(double deltaTime)
     for (var i = 0; i < numTurtles; i++)
     {
         ref var turtle = ref turtles[i];
-        renderer.RenderSprite(tex, turtle.Pos - camera, Vector2.One, turtle.Angle, turtle.Col);
+        var relPos = turtle.Pos - camera;
+        var centerPos = relPos + ((Vector2)tex.Size) / 2f;
+        renderer.RenderLine(centerPos, centerPos + turtle.Dir / 2, 5, turtle.Col);
+        renderer.RenderSprite(tex, relPos, Vector2.One, turtle.Angle, turtle.Col);
     }
+
     stopwatch.Stop();
     renderTimes[avgIndex] = stopwatch.Elapsed.TotalMilliseconds;
     frameRates[avgIndex++] = 1 / deltaTime;

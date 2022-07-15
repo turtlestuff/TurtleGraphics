@@ -2,7 +2,7 @@ using Silk.NET.OpenGL;
 
 namespace RenderyThing.OpenGL;
 
-unsafe readonly struct GLShaderProgram : IDisposable
+unsafe readonly struct ShaderProgram : IDisposable
 {   
     readonly GL _gl;
 
@@ -11,7 +11,7 @@ unsafe readonly struct GLShaderProgram : IDisposable
     readonly int _projMatrixLocation;
     readonly int _modelMatrixLocation;
     readonly int _colorLocation;
-    public GLShaderProgram(GL gl, Stream vertSrc, Stream fragSrc)
+    public ShaderProgram(GL gl, Stream vertSrc, Stream fragSrc)
     {
         static uint CreateShader(GL gl, ShaderType type, string source)
         {
@@ -19,7 +19,7 @@ unsafe readonly struct GLShaderProgram : IDisposable
             gl.ShaderSource(shader, source);
             gl.CompileShader(shader);
             var info = gl.GetShaderInfoLog(shader);
-            if(info != "") 
+            if (info != "") 
                 throw new RendererException("shader compilation failed: " + info);
             return shader;
         }
