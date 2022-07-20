@@ -7,7 +7,7 @@ public unsafe sealed class OpenGLTexture : Texture
 {
     readonly uint _handle;
     readonly GL _gl;
-    public OpenGLTexture(Stream fileStream, GL gl, TextureOptions options, PixelFormat format = PixelFormat.Rgba) : base(options)
+    public OpenGLTexture(Stream fileStream, GL gl, TextureOptions options) : base(options)
     {
         _gl = gl;
         _handle = _gl.GenTexture();
@@ -18,7 +18,7 @@ public unsafe sealed class OpenGLTexture : Texture
         fixed (byte* data = span)
         {
             _gl.TexImage2D(TextureTarget.Texture2D, 0, InternalFormat.Rgba8, (uint) img.Width, (uint) img.Height, 0, 
-                format, PixelType.UnsignedByte, data);
+                PixelFormat.Rgba, PixelType.UnsignedByte, data);
         }
         var scaleFilter = (int) (Options.ScalingType == ScalingType.Linear ? GLEnum.Linear : GLEnum.Nearest);
         _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, scaleFilter);
