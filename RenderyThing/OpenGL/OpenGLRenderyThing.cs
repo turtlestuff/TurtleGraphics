@@ -27,7 +27,7 @@ public unsafe sealed class OpenGLRenderer : Renderer
 
     readonly ShaderProgram _texQuadProgram;
     readonly ShaderProgram _solidProgram;
-    Matrix4x4 _projectionMatrix;
+    public Matrix4x4 ProjectionMatrix { get; private set; }
 
     Stream GetResStream(string path) => 
         GetType().Assembly.GetManifestResourceStream($"RenderyThing.OpenGL.{path}") ?? throw new FileNotFoundException($"{path} not found");
@@ -83,7 +83,7 @@ public unsafe sealed class OpenGLRenderer : Renderer
         return new OpenGLTexture(file, _gl, options);
     }
 
-    static Matrix4x4 ModelMatrix(Vector2 position, float rotation, Vector2 size)
+    public static Matrix4x4 ModelMatrix(Vector2 position, float rotation, Vector2 size)
     {
         if (rotation == 0f)
         {
@@ -98,7 +98,7 @@ public unsafe sealed class OpenGLRenderer : Renderer
         }
     }
 
-    static Matrix4x4 RotationFromCenterRect(Vector2 size, float rotation) =>
+    public static Matrix4x4 RotationFromCenterRect(Vector2 size, float rotation) =>
         Matrix4x4.CreateTranslation(-0.5f * size.X, -0.5f * size.Y, 0) *
         Matrix4x4.CreateRotationZ(rotation) *
         Matrix4x4.CreateTranslation(0.5f * size.X, 0.5f * size.Y, 0);
@@ -111,7 +111,7 @@ public unsafe sealed class OpenGLRenderer : Renderer
         _texQuadProgram.SetProjection(&projectionMatrix);
         _solidProgram.Use();
         _solidProgram.SetProjection(&projectionMatrix);
-        _projectionMatrix = projectionMatrix;
+        ProjectionMatrix = projectionMatrix;
     }
 
     public override void RenderSprite(Texture texture, Vector2 position, Vector2 scale, float rotation, Vector4 color)

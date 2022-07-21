@@ -1,30 +1,32 @@
 using System.Runtime.CompilerServices;
 using System.Text;
 using Silk.NET.OpenGL;
-using Silk.NET.Vulkan;
 using static StbTrueTypeSharp.StbTrueType; //StbTrueType.stbtt_Whatever is a mouthful
 
 namespace RenderyThing.OpenGL;
 
+readonly struct AtlasEntry
+{
+    public readonly float UVTop { get; init; }
+    public readonly float UVLeft { get; init; }
+    public readonly float UVBottom { get; init; }
+    public readonly float UVRight { get; init; }
+}
+
 unsafe class GLStbttFont : Font
 {
-    readonly struct AtlasEntry
-    {
-        internal readonly Rectangle<float> Rectangle;
-    }
-
     readonly GL _gl;
 
     readonly byte[] _fontData;
     readonly byte* _fontDataPtr;
     readonly stbtt_fontinfo _fontInfo;
 
-    readonly Dictionary<(int Glyph, float Size), AtlasEntry> _atlasEntries;
+    readonly Dictionary<(int Glyph, float Size), AtlasEntry> _atlasEntries = new();
     readonly uint _atlasSize = 2048;
     readonly uint _altasTexHandle;
     int _currentAtlasX = 0;
     int _currentAtlasY = 0;
-    int _nextAtlasY = 0;
+    int _highestHeight = 0;
 
 
     public GLStbttFont(GL gl, Stream stream)
@@ -69,13 +71,13 @@ unsafe class GLStbttFont : Font
 
     public int GetGlyphKernAdvance(int glyph1, int glyph2) => stbtt_GetGlyphKernAdvance(_fontInfo, glyph1, glyph2);
 
-    public void MakeGlyphBitmap(Span<byte> output, int outWidth, int outHeight, int outStride, float scaleX, float scaleY, int glyphIndex)
+    void MakeGlyphBitmap(Span<byte> output, int outWidth, int outHeight, int outStride, float scaleX, float scaleY, int glyphIndex)
     {
         fixed (byte* outPtr = output)
             stbtt_MakeGlyphBitmap(_fontInfo, outPtr, outWidth, outHeight, outStride, scaleX, scaleY, glyphIndex);
     }
     
-    public byte[] GetGlyphBitmap(float scaleX, float scaleY, int glyphIndex, out int width, out int height, out int xOff, out int yOff)
+    byte[] GetGlyphBitmap(float scaleX, float scaleY, int glyphIndex, out int width, out int height, out int xOff, out int yOff)
     {
         //ive cheated here to make this managed
         GetGlyphBitmapBox(glyphIndex, scaleX, scaleY, out var ix0, out var iy0, out var ix1, out var iy1);
@@ -91,7 +93,47 @@ unsafe class GLStbttFont : Font
 
     public float ScaleForPixelHeight(float height) => stbtt_ScaleForPixelHeight(_fontInfo, height);
 
-    
+    public AtlasEntry GetOrCreateGlyphAtlasEntry(int glyph, float size)
+    {
+        if (_atlasEntries.TryGetValue((glyph, size), out var entry))
+        {
+            return entry;
+        }
+
+        var scale = ScaleForPixelHeight(size);
+        var data = GetGlyphBitmap(scale, scale, glyph, out var width, out var height, out var _, out var _);
+        if (width + _currentAtlasX >= _atlasSize)
+        {
+            //go to next row
+            _currentAtlasY += _highestHeight;
+            _highestHeight = 0;
+            _currentAtlasX = 0;
+            if (_currentAtlasY > _atlasSize)
+                throw new("Atlas Full");
+        }
+
+        if (height > _highestHeight)
+        {
+            _highestHeight = height;
+        }
+
+        fixed (byte* dataPtr = data)
+        {
+            UseAtlasTexture();
+            _gl.TexSubImage2D(TextureTarget.Texture2D, 0, _currentAtlasX, _currentAtlasY, (uint) width, (uint) height, 
+                PixelFormat.Red, PixelType.UnsignedShort, dataPtr);
+        }
+        var atlasEntry = new AtlasEntry 
+        {
+            UVTop = (float) _currentAtlasY / _atlasSize,
+            UVLeft = (float) _currentAtlasX / _atlasSize,
+            UVBottom = (float) (_currentAtlasY + height) / _atlasSize,
+            UVRight = (float) (_currentAtlasX + width) / _atlasSize
+        };
+        _currentAtlasX += width;
+        _atlasEntries.Add((glyph, size), atlasEntry);
+        return atlasEntry;
+    }
 
     public void UseAtlasTexture()
     {
