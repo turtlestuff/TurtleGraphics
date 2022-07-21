@@ -111,7 +111,7 @@ void OnRender(double deltaTime)
         renderer.RenderLine(centerPos, centerPos + turtle.Dir / 2, 5, turtle.Col);
         renderer.RenderSprite(tex, relPos, Vector2.One, turtle.Angle, turtle.Col);
     }
-    ((OpenGLRenderer)renderer).RenderAtlas(font);
+    //((OpenGLRenderer)renderer).RenderAtlas(font);
     renderer.RenderText("abcdefghijklmnopqrstuvwxyz", new(10), font, 32f, Vector4.One);
     stopwatch.Stop();
     renderTimes[avgIndex] = stopwatch.Elapsed.TotalMilliseconds;

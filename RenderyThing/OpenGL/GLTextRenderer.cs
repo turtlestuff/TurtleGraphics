@@ -16,8 +16,8 @@ unsafe class GLTextRenderer
         1.0f, 0.0f,
         0.0f, 1.0f,
     
-        0.0f, 1.0f,
         1.0f, 0.0f,
+        0.0f, 1.0f,
         1.0f, 1.0f,
         //UV
         0.0f, 0.0f,
@@ -111,6 +111,8 @@ unsafe class GLTextRenderer
             newUVs[10] = entry.UVRight; //eeeee
             newUVs[11] = entry.UVBottom; //eeeeeeeeeeeeeeeewwwwwwwwwwwwww
 
+            font.UseAtlasTexture();
+
             _fontQuadVao.Bind();
             _fontQuadVbo.Bind();
             _fontQuadVbo.BufferSubData(offset: 12, newUVs);
@@ -124,7 +126,7 @@ unsafe class GLTextRenderer
 
             _gl.DrawArrays(PrimitiveType.Triangles, 0, 6);
 
-                        _renderer.RenderRect(new(pos.X + leftSideBearing, pos.Y + entry.Offset.Y), entry.Size, 0f, Vector4.One);
+                        //_renderer.RenderRect(new(pos.X + leftSideBearing, pos.Y + entry.Offset.Y), entry.Size, 0f, Vector4.One);
 
 
             pos.X += advanceWidth;

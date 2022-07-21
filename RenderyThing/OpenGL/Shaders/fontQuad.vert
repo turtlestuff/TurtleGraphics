@@ -1,6 +1,6 @@
 #version 330 core //Using version GLSL version 3.3
-in vec2 vPos;
-in vec2 uvCoord;
+layout (location = 0) in vec2 vPos;
+layout (location = 1) in vec2 uvCoord;
         
 uniform mat4 model;
 uniform mat4 projection;
