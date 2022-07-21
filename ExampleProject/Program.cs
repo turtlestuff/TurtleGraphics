@@ -108,11 +108,10 @@ void OnRender(double deltaTime)
         ref var turtle = ref turtles[i];
         var relPos = turtle.Pos - camera;
         var centerPos = relPos + ((Vector2)tex.Size) / 2f;
-        renderer.RenderLine(centerPos, centerPos + turtle.Dir / 2, 5, turtle.Col);
+        //renderer.RenderLine(centerPos, centerPos + turtle.Dir / 2, 5, turtle.Col);
         renderer.RenderSprite(tex, relPos, Vector2.One, turtle.Angle, turtle.Col);
     }
-    //((OpenGLRenderer)renderer).RenderAtlas(font);
-    renderer.RenderText("abcdefghijklmnopqrstuvwxyz", new(10), font, 32f, Vector4.One);
+    renderer.RenderText("Sphinx of black quartz, judge my vow.", Vector2.One, font, 32f, Vector4.One);
     stopwatch.Stop();
     renderTimes[avgIndex] = stopwatch.Elapsed.TotalMilliseconds;
     frameRates[avgIndex++] = 1 / deltaTime;

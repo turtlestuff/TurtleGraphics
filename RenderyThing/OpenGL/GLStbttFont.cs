@@ -91,8 +91,10 @@ unsafe class GLStbttFont : Font
         xOff = ix0;
         yOff = iy0;
 
-        var output = new byte[width * height];
-        MakeGlyphBitmap(output, width, height, width, scaleX, scaleY, glyphIndex);
+        //the alignment is required by OpenGL. we could turn it off but i don't want to
+        var alignedWidth = ((width - 1) / 4 + 1) * 4;
+        var output = new byte[alignedWidth * height];
+        MakeGlyphBitmap(output, width, height, alignedWidth, scaleX, scaleY, glyphIndex);
         return output;
     }
 
@@ -126,6 +128,7 @@ unsafe class GLStbttFont : Font
         fixed (byte* dataPtr = data)
         {
             UseAtlasTexture();
+            
             _gl.TexSubImage2D(TextureTarget.Texture2D, 0, _currentAtlasX, _currentAtlasY, (uint) width, (uint) height, 
                 PixelFormat.Red, PixelType.UnsignedByte, dataPtr);
         }
