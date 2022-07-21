@@ -52,12 +52,15 @@ public abstract class Renderer : IDisposable
 
     protected abstract Texture CreateTexture(Stream file, TextureOptions options);
     public virtual Texture GetTexture(string name) => _textures[name];
+    public abstract Font CreateFont(Stream file);
 
     public void RenderSprite(Texture texture, Vector2 position) =>
         RenderSprite(texture, position, Vector2.One, 0, Vector4.One);
     public abstract void RenderSprite(Texture texture, Vector2 position, Vector2 scale, float rotation, Vector4 color);
     public abstract void RenderRect(Vector2 position, Vector2 size, float rotation, Vector4 color);
     public abstract void RenderLine(Vector2 from, Vector2 to, float width, Vector4 color);
+    public abstract void RenderText(string text, Vector2 position, Font font, float size, Vector4 color);
+
     public abstract void Clear(Vector4 color);
     
     public abstract void Dispose();

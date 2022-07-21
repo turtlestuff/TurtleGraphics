@@ -20,6 +20,11 @@ unsafe readonly struct VertexBufferObject : IDisposable
         _gl.BufferData(BufferTargetARB.ArrayBuffer, data, _bufferUsage);
     }
 
+    public void BufferSubData(nint offset, ReadOnlySpan<float> data)
+    {
+        _gl.BufferSubData(BufferTargetARB.ArrayBuffer, offset * sizeof(float), data);
+    }
+
     public void Bind()
     {
         _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _handle);

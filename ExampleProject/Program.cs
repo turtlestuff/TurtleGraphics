@@ -2,6 +2,7 @@
 using System.Drawing;
 using System.Numerics;
 using RenderyThing;
+using RenderyThing.OpenGL;
 using Silk.NET.Input;
 using Silk.NET.Windowing;
 
@@ -16,6 +17,7 @@ var camera = Vector2.Zero;
 IWindow window;
 Renderer renderer = default!;
 IInputContext input = default!;
+Font font = default!;
 var turtles = new (Vector2 Pos, float Angle, Vector4 Col, Vector2 Dir, float Rot)[numTurtles]; 
 
 var options = WindowOptions.Default;
@@ -27,9 +29,10 @@ window = Window.Create(options);
 void OnLoad()
 {
     renderer = Renderer.GetApi(window);
-    using var fs = typeof(Program).Assembly.GetManifestResourceStream("ExampleProject.turtle.png") ?? throw new Exception("turtle.png not found");
-    var tex = renderer.AddTexture(fs, "turtle", new() { ScalingType = ScalingType.NearestNeighbor });
-
+    using var ts = typeof(Program).Assembly.GetManifestResourceStream("ExampleProject.turtle.png") ?? throw new Exception("turtle.png not found");
+    using var fs = typeof(Program).Assembly.GetManifestResourceStream("ExampleProject.NotoSans.ttf") ?? throw new Exception("noto sans not found");
+    var tex = renderer.AddTexture(ts, "turtle", new() { ScalingType = ScalingType.NearestNeighbor });
+    font = renderer.CreateFont(fs);
     for (var i = 0; i < numTurtles; i++)
     {
         var x = Random.Shared.Next(tex.Size.X, worldSize - tex.Size.X);
@@ -108,7 +111,8 @@ void OnRender(double deltaTime)
         renderer.RenderLine(centerPos, centerPos + turtle.Dir / 2, 5, turtle.Col);
         renderer.RenderSprite(tex, relPos, Vector2.One, turtle.Angle, turtle.Col);
     }
-
+    ((OpenGLRenderer)renderer).RenderAtlas(font);
+    renderer.RenderText("abcdefghijklmnopqrstuvwxyz", new(10), font, 32f, Vector4.One);
     stopwatch.Stop();
     renderTimes[avgIndex] = stopwatch.Elapsed.TotalMilliseconds;
     frameRates[avgIndex++] = 1 / deltaTime;

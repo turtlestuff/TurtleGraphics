@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
 
@@ -18,6 +20,7 @@ public unsafe sealed class OpenGLRenderer : Renderer
     };
 
     readonly GL _gl;
+    readonly GLTextRenderer _textRenderer;
 
     readonly VertexArrayObject _quadVao;
     readonly VertexBufferObject _quadVbo;
@@ -67,8 +70,6 @@ public unsafe sealed class OpenGLRenderer : Renderer
         _gl.Enable(EnableCap.Blend);
         _gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
 
-        _gl.Enable(EnableCap.LineSmooth);
-
         _window.Resize += size => 
         {
             _gl.Viewport(FramebufferSize);
@@ -76,11 +77,27 @@ public unsafe sealed class OpenGLRenderer : Renderer
 
         UpdateProjectionMatrix();
         CameraPropertyChanged += UpdateProjectionMatrix;
+
+        _gl.DebugMessageCallback(DebugCallback, null);
+
+        _textRenderer = new(_gl, this);
+    }
+
+    public static void DebugCallback(GLEnum source, GLEnum type, int _, GLEnum severity, int length, nint message, nint __)
+    {
+        var errorMessage = Marshal.PtrToStringAnsi(message, length);
+        Console.Error.WriteLine($"OpenGL debug callback: Source: {Enum.GetName(source)}, Type: {Enum.GetName(type)}, Severity: {Enum.GetName(severity)}");
+        Console.Error.WriteLine(errorMessage);
     }
 
     protected override Texture CreateTexture(Stream file, TextureOptions options)
     {
         return new OpenGLTexture(file, _gl, options);
+    }
+
+    public override Font CreateFont(Stream file)
+    {
+        return new GLStbttFont(_gl, file);
     }
 
     public static Matrix4x4 ModelMatrix(Vector2 position, float rotation, Vector2 size)
@@ -172,6 +189,19 @@ public unsafe sealed class OpenGLRenderer : Renderer
         _solidProgram.SetColor(ref color);
 
         _gl.DrawArrays(PrimitiveType.Triangles, 0, 6);
+    }
+
+    public void RenderAtlas(Font font)
+    {
+        _textRenderer.RenderAtlas((GLStbttFont) font);
+    }
+
+    public override void RenderText(string text, Vector2 position, Font font, float size, Vector4 color)
+    {
+        if (font is not GLStbttFont glFont)
+            throw new RendererException("Font is not OpenGL font");
+        
+        _textRenderer.Render(text, glFont, size, position, ref color);
     }
 
     public override void Clear(Vector4 color)

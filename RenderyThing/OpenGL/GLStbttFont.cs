@@ -1,4 +1,6 @@
+using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using Silk.NET.OpenGL;
 using static StbTrueTypeSharp.StbTrueType; //StbTrueType.stbtt_Whatever is a mouthful
@@ -11,6 +13,9 @@ readonly struct AtlasEntry
     public readonly float UVLeft { get; init; }
     public readonly float UVBottom { get; init; }
     public readonly float UVRight { get; init; }
+
+    public readonly Vector2 Size { get; init; }
+    public readonly Vector2 Offset { get; init; }
 }
 
 unsafe class GLStbttFont : Font
@@ -22,8 +27,8 @@ unsafe class GLStbttFont : Font
     readonly stbtt_fontinfo _fontInfo;
 
     readonly Dictionary<(int Glyph, float Size), AtlasEntry> _atlasEntries = new();
-    readonly uint _atlasSize = 2048;
-    readonly uint _altasTexHandle;
+    internal readonly uint _atlasSize = 2048;
+    internal readonly uint _altasTexHandle;
     int _currentAtlasX = 0;
     int _currentAtlasY = 0;
     int _highestHeight = 0;
@@ -41,7 +46,7 @@ unsafe class GLStbttFont : Font
 
         _altasTexHandle = _gl.GenTexture();
         UseAtlasTexture();
-        _gl.TexImage2D(TextureTarget.Texture2D, 0, InternalFormat.Rgba8, _atlasSize, _atlasSize, 0, PixelFormat.Red, 
+        _gl.TexImage2D(TextureTarget.Texture2D, 0, InternalFormat.R8, _atlasSize, _atlasSize, 0, PixelFormat.Red, 
             PixelType.UnsignedByte, pixels: null); //generates an empty texture.
 
         _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int) GLEnum.Nearest);
@@ -101,7 +106,8 @@ unsafe class GLStbttFont : Font
         }
 
         var scale = ScaleForPixelHeight(size);
-        var data = GetGlyphBitmap(scale, scale, glyph, out var width, out var height, out var _, out var _);
+        var data = GetGlyphBitmap(scale, scale, glyph, out var width, out var height, out var xOff, out var yOff);
+
         if (width + _currentAtlasX >= _atlasSize)
         {
             //go to next row
@@ -121,14 +127,16 @@ unsafe class GLStbttFont : Font
         {
             UseAtlasTexture();
             _gl.TexSubImage2D(TextureTarget.Texture2D, 0, _currentAtlasX, _currentAtlasY, (uint) width, (uint) height, 
-                PixelFormat.Red, PixelType.UnsignedShort, dataPtr);
+                PixelFormat.Red, PixelType.UnsignedByte, dataPtr);
         }
         var atlasEntry = new AtlasEntry 
         {
             UVTop = (float) _currentAtlasY / _atlasSize,
             UVLeft = (float) _currentAtlasX / _atlasSize,
             UVBottom = (float) (_currentAtlasY + height) / _atlasSize,
-            UVRight = (float) (_currentAtlasX + width) / _atlasSize
+            UVRight = (float) (_currentAtlasX + width) / _atlasSize,
+            Size = new(width, height),
+            Offset = new(xOff, yOff)
         };
         _currentAtlasX += width;
         _atlasEntries.Add((glyph, size), atlasEntry);

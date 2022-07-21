@@ -27,7 +27,14 @@ public unsafe sealed class OpenGLTexture : Texture
         Size = new(img.Width, img.Height);
     }
        
-    
+    public OpenGLTexture(uint handle, Vector2D<int> size, GL gl, TextureOptions options) : base(options)
+    {
+        _handle = handle;
+        Size = size;
+        _gl = gl;
+    }
+
+
     public void Use()
     {
         _gl.BindTexture(TextureTarget.Texture2D, _handle);
