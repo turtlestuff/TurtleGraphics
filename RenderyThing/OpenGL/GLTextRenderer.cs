@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Security.Cryptography.X509Certificates;
 using Silk.NET.OpenGL;
+using Silk.NET.SDL;
 
 namespace RenderyThing.OpenGL;
 
@@ -36,14 +37,15 @@ unsafe class GLTextRenderer
     readonly VertexArrayObject _fontQuadVao;
     readonly VertexBufferObject _fontQuadVbo;
 
-    Stream GetResStream(string path) => 
-        GetType().Assembly.GetManifestResourceStream($"RenderyThing.OpenGL.{path}") ?? throw new FileNotFoundException($"{path} not found");
+    float _scale;
 
     public GLTextRenderer(GL gl, OpenGLRenderer renderer)
     {
         _gl = gl;
         _renderer = renderer;
-        _fontShader = new(gl, GetResStream("Shaders.fontQuad.vert"), GetResStream("Shaders.fontQuad.frag"));
+        using var vert = GLHelper.GetResStream("Shaders.fontQuad.vert");
+        using var frag = GLHelper.GetResStream("Shaders.fontQuad.frag");
+        _fontShader = new(gl, vert, frag);
 
         _fontQuadVbo = new VertexBufferObject(_gl, BufferUsageARB.DynamicDraw);
         _fontQuadVao = new VertexArrayObject(_gl, _fontQuadVbo);
@@ -57,6 +59,13 @@ unsafe class GLTextRenderer
         _fontQuadVao.VertexAttribPointer(1, 2, VertexAttribPointerType.Float, false, 2, 12);
     }
 
+    public void UpdateProjectionMatrix(Vector2D<int> newFBSize, float scale)
+    {
+        _fontShader.Use();
+        var projMat = Matrix4x4.CreateOrthographicOffCenter(left: 0, right: newFBSize.X, top: 0,  bottom: newFBSize.Y, zNearPlane: -1f, zFarPlane: 1f);
+        _fontShader.SetProjection(&projMat);
+        _scale = scale;
+    }
     public void RenderAtlas(GLStbttFont font)
     {
         _renderer.RenderSprite(new OpenGLTexture(font._altasTexHandle, new((int) font._atlasSize), _gl, new()), Vector2.Zero, Vector2.One, 0f, new(1,1,1,0.5f));
@@ -65,23 +74,25 @@ unsafe class GLTextRenderer
     public void Render(string text, GLStbttFont font, float size, Vector2 position, ref Vector4 color)
     {
         Span<float> newUVs = stackalloc float[12];
-
-        _fontShader.Use();
-        var projMat = _renderer.ProjectionMatrix;
-        _fontShader.SetProjection(&projMat);
-
-        var scale = font.ScaleForPixelHeight(size);
+        var pxSize = size * _scale;
+        var pxPos = position * _scale;
+        var scale = font.ScaleForMappingEmToPixels(pxSize);
         font.GetFontVMetrics(out var asc, out var des, out var lg);
         var ascent = asc * scale;
         var descent = des * scale;
         var lineGap = lg * scale;
 
+        _fontQuadVao.Bind();
+        _fontQuadVbo.Bind();
+        _fontShader.Use();
+        font.UseAtlasTexture();
+
         var glyphs = text.EnumerateRunes().Select(font.FindGlyphIndex).ToArray();
-        var pos = new Vector2(position.X, position.Y + ascent);
+        var textPos = new Vector2(pxPos.X, pxPos.Y + ascent);
         for (var i = 0; i < glyphs.Length; i++)
         {
             var glyph = glyphs[i];
-            var entry = font.GetOrCreateGlyphAtlasEntry(glyph, size);
+            var entry = font.GetOrCreateGlyphAtlasEntry(glyph, pxSize);
             font.GetGlyphHMetrics(glyph, out var aw, out var lsb);
             var advanceWidth = aw * scale;
             var leftSideBearing = lsb * scale;
@@ -111,25 +122,18 @@ unsafe class GLTextRenderer
             newUVs[10] = entry.UVRight; //eeeee
             newUVs[11] = entry.UVBottom; //eeeeeeeeeeeeeeeewwwwwwwwwwwwww
 
-            font.UseAtlasTexture();
-
-            _fontQuadVao.Bind();
-            _fontQuadVbo.Bind();
             _fontQuadVbo.BufferSubData(offset: 12, newUVs);
             _fontQuadVao.VertexAttribPointer(0, 2, VertexAttribPointerType.Float, false, 2, 0);
             _fontQuadVao.VertexAttribPointer(1, 2, VertexAttribPointerType.Float, false, 2, 12);
 
-            var mat = OpenGLRenderer.ModelMatrix(new(pos.X + leftSideBearing, pos.Y + entry.Offset.Y), 0f, entry.Size);
+            var mat = GLHelper.ModelMatrix(new(textPos.X + leftSideBearing, textPos.Y + entry.Offset.Y), 0f, entry.Size);
 
             _fontShader.SetModel(&mat);
             _fontShader.SetColor(ref color);
 
             _gl.DrawArrays(PrimitiveType.Triangles, 0, 6);
 
-                        //_renderer.RenderRect(new(pos.X + leftSideBearing, pos.Y + entry.Offset.Y), entry.Size, 0f, Vector4.One);
-
-
-            pos.X += advanceWidth;
+            textPos.X += advanceWidth;
         }
     }
 }

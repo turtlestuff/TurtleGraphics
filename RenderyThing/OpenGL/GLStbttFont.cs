@@ -98,7 +98,16 @@ unsafe class GLStbttFont : Font
         return output;
     }
 
-    public float ScaleForPixelHeight(float height) => stbtt_ScaleForPixelHeight(_fontInfo, height);
+    public float ScaleForMappingEmToPixels(float height) => stbtt_ScaleForMappingEmToPixels(_fontInfo, height);
+    
+    public void ClearAtlas()
+    {
+        _atlasEntries.Clear();
+        _currentAtlasX = 0;
+        _highestHeight = 0;
+        _currentAtlasY = 0;
+        //no reason to actually clear the texture
+    }
 
     public AtlasEntry GetOrCreateGlyphAtlasEntry(int glyph, float size)
     {
@@ -107,7 +116,7 @@ unsafe class GLStbttFont : Font
             return entry;
         }
 
-        var scale = ScaleForPixelHeight(size);
+        var scale = ScaleForMappingEmToPixels(size);
         var data = GetGlyphBitmap(scale, scale, glyph, out var width, out var height, out var xOff, out var yOff);
 
         if (width + _currentAtlasX >= _atlasSize)
@@ -117,7 +126,7 @@ unsafe class GLStbttFont : Font
             _highestHeight = 0;
             _currentAtlasX = 0;
             if (_currentAtlasY > _atlasSize)
-                throw new("Atlas Full");
+                ClearAtlas();
         }
 
         if (height > _highestHeight)

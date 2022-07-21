@@ -70,17 +70,16 @@ public unsafe sealed class OpenGLRenderer : Renderer
         _gl.Enable(EnableCap.Blend);
         _gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
 
+        _textRenderer = new(_gl, this);
+
         _window.Resize += size => 
         {
             _gl.Viewport(FramebufferSize);
         };
-
         UpdateProjectionMatrix();
         CameraPropertyChanged += UpdateProjectionMatrix;
 
         _gl.DebugMessageCallback(DebugCallback, null);
-
-        _textRenderer = new(_gl, this);
     }
 
     public static void DebugCallback(GLEnum source, GLEnum type, int _, GLEnum severity, int length, nint message, nint __)
@@ -100,26 +99,6 @@ public unsafe sealed class OpenGLRenderer : Renderer
         return new GLStbttFont(_gl, file);
     }
 
-    public static Matrix4x4 ModelMatrix(Vector2 position, float rotation, Vector2 size)
-    {
-        if (rotation == 0f)
-        {
-            return Matrix4x4.CreateScale(size.X, size.Y, 1f) * 
-            Matrix4x4.CreateTranslation(position.X, position.Y, 0);
-        }
-        else 
-        {
-            return Matrix4x4.CreateScale(size.X, size.Y, 1f) * 
-            RotationFromCenterRect(size, rotation) *
-            Matrix4x4.CreateTranslation(position.X, position.Y, 0);
-        }
-    }
-
-    public static Matrix4x4 RotationFromCenterRect(Vector2 size, float rotation) =>
-        Matrix4x4.CreateTranslation(-0.5f * size.X, -0.5f * size.Y, 0) *
-        Matrix4x4.CreateRotationZ(rotation) *
-        Matrix4x4.CreateTranslation(0.5f * size.X, 0.5f * size.Y, 0);
-
     void UpdateProjectionMatrix()
     {
         var projectionMatrix = Matrix4x4.CreateOrthographicOffCenter(left: 0, right: Size.X, top: 0,  bottom: Size.Y, zNearPlane: -1f, zFarPlane: 1f);
@@ -129,6 +108,7 @@ public unsafe sealed class OpenGLRenderer : Renderer
         _solidProgram.Use();
         _solidProgram.SetProjection(&projectionMatrix);
         ProjectionMatrix = projectionMatrix;
+        _textRenderer.UpdateProjectionMatrix(FramebufferSize, Scale); // text renderer renders at pixel resolution
     }
 
     public override void RenderSprite(Texture texture, Vector2 position, Vector2 scale, float rotation, Vector4 color)
@@ -141,7 +121,7 @@ public unsafe sealed class OpenGLRenderer : Renderer
         _quadVao.Bind();
 
         var actualSize = new Vector2(tex.Size.X * scale.X, tex.Size.Y * scale.Y);
-        var modelMatrix = ModelMatrix(position, rotation, actualSize);
+        var modelMatrix = GLHelper.ModelMatrix(position, rotation, actualSize);
         _texQuadProgram.SetModel(&modelMatrix);
         _texQuadProgram.SetColor(ref color);
         
@@ -154,7 +134,7 @@ public unsafe sealed class OpenGLRenderer : Renderer
         _solidProgram.Use();
         _quadVao.Bind();
 
-        var modelMatrix = ModelMatrix(position, rotation, size);
+        var modelMatrix = GLHelper.ModelMatrix(position, rotation, size);
         _solidProgram.SetModel(&modelMatrix);
         _solidProgram.SetColor(ref color);
         

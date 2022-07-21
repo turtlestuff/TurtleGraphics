@@ -111,7 +111,7 @@ void OnRender(double deltaTime)
         //renderer.RenderLine(centerPos, centerPos + turtle.Dir / 2, 5, turtle.Col);
         renderer.RenderSprite(tex, relPos, Vector2.One, turtle.Angle, turtle.Col);
     }
-    renderer.RenderText("Sphinx of black quartz, judge my vow.", Vector2.One, font, 32f, Vector4.One);
+    renderer.RenderText("Hello world!", Vector2.One, font, 32f, Vector4.One);
     stopwatch.Stop();
     renderTimes[avgIndex] = stopwatch.Elapsed.TotalMilliseconds;
     frameRates[avgIndex++] = 1 / deltaTime;
