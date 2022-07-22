@@ -53,6 +53,8 @@ public abstract class Renderer : IDisposable
     protected abstract Texture CreateTexture(Stream file, TextureOptions options);
     public virtual Texture GetTexture(string name) => _textures[name];
     public abstract Font CreateFont(Stream file);
+    public abstract Vector2 MeasureText(string text, Font font, float size);
+
 
     public void RenderSprite(Texture texture, Vector2 position) =>
         RenderSprite(texture, position, Vector2.One, 0, Vector4.One);

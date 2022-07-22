@@ -111,7 +111,12 @@ void OnRender(double deltaTime)
         //renderer.RenderLine(centerPos, centerPos + turtle.Dir / 2, 5, turtle.Col);
         renderer.RenderSprite(tex, relPos, Vector2.One, turtle.Angle, turtle.Col);
     }
-    renderer.RenderText("Hello world!", Vector2.One, font, 32f, Vector4.One);
+    var str = $"Position: {camera.X}, {camera.Y}";
+    var size = 16f;
+    var textSize = renderer.MeasureText(str, font, size);
+    var textPos = new Vector2((renderer.Size.X - textSize.X) / 2f, 0f);
+    renderer.RenderRect(textPos, textSize, 0f, new(1f, 0.2f, 0f, 0.5f));
+    renderer.RenderText(str, textPos, font, size, Vector4.One);
     stopwatch.Stop();
     renderTimes[avgIndex] = stopwatch.Elapsed.TotalMilliseconds;
     frameRates[avgIndex++] = 1 / deltaTime;

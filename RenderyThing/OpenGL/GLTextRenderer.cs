@@ -71,22 +71,51 @@ unsafe class GLTextRenderer
         _renderer.RenderSprite(new OpenGLTexture(font._altasTexHandle, new((int) font._atlasSize), _gl, new()), Vector2.Zero, Vector2.One, 0f, new(1,1,1,0.5f));
     }
 
-    public void Render(string text, GLStbttFont font, float size, Vector2 position, ref Vector4 color)
+    public static Vector2 MeasureString(string text, GLStbttFont font, float size)
+    {
+        var fontScale = font.ScaleForMappingEmToPixels(size);
+        font.GetFontVMetrics(out var asc, out var des, out var lg);
+        var ascent = asc * fontScale;
+        var descent = des * fontScale;
+        var lineGap = lg * fontScale;
+        var height = ascent - descent;
+        var glyphs = text.EnumerateRunes().Select(font.FindGlyphIndex).ToArray();
+        var width = 0f;
+        for (var i = 0; i < glyphs.Length; i++)
+        {
+            var glyph = glyphs[i];
+            font.GetGlyphHMetrics(glyph, out var aw, out var lsb);
+            var advanceWidth = aw * fontScale;
+            var leftSideBearing = lsb * fontScale;
+            if (i < glyphs.Length - 1)
+            {
+                var nextGlyph = glyphs[i + 1];
+                var kern = font.GetGlyphKernAdvance(glyph, nextGlyph);
+                advanceWidth += kern * fontScale;
+            }
+            width += advanceWidth;
+        }
+        return new(width, height);
+    }
+
+    public void Render(string text, GLStbttFont font, float size, Vector2 position, ref Vector4 color, out Vector2 outSize)
     {
         Span<float> newUVs = stackalloc float[12];
         var pxSize = size * _scale;
         var pxPos = position * _scale;
-        var scale = font.ScaleForMappingEmToPixels(pxSize);
+        var fontScale = font.ScaleForMappingEmToPixels(pxSize);
         font.GetFontVMetrics(out var asc, out var des, out var lg);
-        var ascent = asc * scale;
-        var descent = des * scale;
-        var lineGap = lg * scale;
+        var ascent = asc * fontScale;
+        var descent = des * fontScale;
+        var lineGap = lg * fontScale;
+        var height = (ascent - descent) / _scale;
 
         _fontQuadVao.Bind();
         _fontQuadVbo.Bind();
         _fontShader.Use();
         font.UseAtlasTexture();
 
+        var width = 0f;
         var glyphs = text.EnumerateRunes().Select(font.FindGlyphIndex).ToArray();
         var textPos = new Vector2(pxPos.X, pxPos.Y + ascent);
         for (var i = 0; i < glyphs.Length; i++)
@@ -94,13 +123,13 @@ unsafe class GLTextRenderer
             var glyph = glyphs[i];
             var entry = font.GetOrCreateGlyphAtlasEntry(glyph, pxSize);
             font.GetGlyphHMetrics(glyph, out var aw, out var lsb);
-            var advanceWidth = aw * scale;
-            var leftSideBearing = lsb * scale;
+            var advanceWidth = aw * fontScale;
+            var leftSideBearing = lsb * fontScale;
             if (i < glyphs.Length - 1)
             {
                 var nextGlyph = glyphs[i + 1];
                 var kern = font.GetGlyphKernAdvance(glyph, nextGlyph);
-                advanceWidth += kern * scale;
+                advanceWidth += kern * fontScale;
             }
             
             newUVs[0] = entry.UVLeft; //eeeee
@@ -134,6 +163,8 @@ unsafe class GLTextRenderer
             _gl.DrawArrays(PrimitiveType.Triangles, 0, 6);
 
             textPos.X += advanceWidth;
+            width += advanceWidth / _scale;
         }
+        outSize = new(width, height);
     }
 }

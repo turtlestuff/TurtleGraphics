@@ -176,12 +176,20 @@ public unsafe sealed class OpenGLRenderer : Renderer
         _textRenderer.RenderAtlas((GLStbttFont) font);
     }
 
+    public override Vector2 MeasureText(string text, Font font, float size)
+    {
+        if (font is not GLStbttFont glFont)
+            throw new RendererException("Font is not OpenGL font");
+
+        return GLTextRenderer.MeasureString(text, glFont, size);
+    }
+
     public override void RenderText(string text, Vector2 position, Font font, float size, Vector4 color)
     {
         if (font is not GLStbttFont glFont)
             throw new RendererException("Font is not OpenGL font");
         
-        _textRenderer.Render(text, glFont, size, position, ref color);
+        _textRenderer.Render(text, glFont, size, position, ref color, out _);
     }
 
     public override void Clear(Vector4 color)
