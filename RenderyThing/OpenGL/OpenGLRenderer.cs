@@ -110,25 +110,13 @@ public unsafe sealed class OpenGLRenderer : Renderer
         _textRenderer.UpdateProjectionMatrix(FramebufferSize, Scale); // text renderer renders at pixel resolution
     }
 
-    public override void RenderSprite(Texture texture, Vector2 position, Vector2 scale, float rotation, Vector4 color)
-    {
-        if (texture is not OpenGLTexture tex)
-        {
-            throw new Exception($"invalid texture type: expected OpenGLTexture and got {texture.GetType().Name}");
-        }
-        _texQuadProgram.Use();
-        _quadVao.Bind();
+    public override void RenderSprite(Texture texture, Vector2 position, Vector2 scale, float rotation, Vector4 color) =>
+        RenderTexRect(texture, position, texture.Size.ToSystemF() * scale, rotation, color);
 
-        var actualSize = new Vector2(tex.Size.X * scale.X, tex.Size.Y * scale.Y);
-        var modelMatrix = GLHelper.ModelMatrix(position, rotation, actualSize);
-        _texQuadProgram.SetModel(&modelMatrix);
-        _texQuadProgram.SetColor(ref color);
-        
-        tex.Use();
-        _gl.DrawArrays(PrimitiveType.Triangles, 0, 6);
-    }
+    public override void RenderTexRect(Texture texture, Rectangle<float> rect, float rotation, Vector4 color) =>
+        RenderTexRect(texture, rect.Origin.ToSystem(), rect.Origin.ToSystem(), rotation, color);
 
-    public override void RenderSprite(Texture texture, Rectangle<float> rect, float rotation, Vector4 color)
+    public override void RenderTexRect(Texture texture, Vector2 position, Vector2 size, float rotation, Vector4 color)
     {
         if (texture is not OpenGLTexture tex)
         {
@@ -137,8 +125,8 @@ public unsafe sealed class OpenGLRenderer : Renderer
         _texQuadProgram.Use();
         _quadVao.Bind();
 
-        var actualSize = new Vector2(rect.Size.X, rect.Size.Y);
-        var modelMatrix = GLHelper.ModelMatrix((Vector2) rect.Origin, rotation, actualSize);
+        var actualSize = size;
+        var modelMatrix = GLHelper.ModelMatrix(position, rotation, actualSize);
         _texQuadProgram.SetModel(&modelMatrix);
         _texQuadProgram.SetColor(ref color);
         
@@ -160,12 +148,10 @@ public unsafe sealed class OpenGLRenderer : Renderer
         _gl.DrawArrays(PrimitiveType.Triangles, 0, 6);
     }
 
-    static Vector2 Normal(Vector2 vec) => new(-vec.Y, vec.X);
-
     public override void RenderLine(Vector2 from, Vector2 to, float width, Vector4 color)
     {
         var lineVec = Vector2.Normalize(to - from);
-        var normal = Normal(lineVec) * width / 2f;
+        var normal = lineVec.Normal() * width / 2f;
         var from1 = from + normal;
         var from2 = from - normal;
         var to1 = to + normal;
@@ -216,7 +202,7 @@ public unsafe sealed class OpenGLRenderer : Renderer
             Vector2 fromOffset;
             Vector2 toOffset;
             var line = Vector2.Normalize(to - from);
-            var normal = Normal(line);
+            var normal = line.Normal();
             if (!loop && i == 0)
             {
                 fromOffset = normal * hWidth;
@@ -224,7 +210,7 @@ public unsafe sealed class OpenGLRenderer : Renderer
             else 
             {
                 var prev = i == 0 ? points[^1] : points[i - 1];
-                var miter = Normal(Vector2.Normalize(Vector2.Normalize(from - prev) + line)); 
+                var miter = Vector2.Normalize(Vector2.Normalize(from - prev) + line).Normal(); 
                 var len = hWidth / Vector2.Dot(normal, miter);
                 fromOffset = miter * len;
             }
@@ -235,7 +221,7 @@ public unsafe sealed class OpenGLRenderer : Renderer
             else
             {
                 var next = i >= points.Length - 2 ? points[i - points.Length + 2] : points[i + 2];
-                var miter = Normal(Vector2.Normalize(Vector2.Normalize(next - to) + line)); 
+                var miter = Vector2.Normalize(Vector2.Normalize(next - to) + line).Normal(); 
                 var len = hWidth / Vector2.Dot(normal, miter);
                 toOffset = miter * len;
             }

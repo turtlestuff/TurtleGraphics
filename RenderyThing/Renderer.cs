@@ -59,7 +59,8 @@ public abstract class Renderer : IDisposable
     public void RenderSprite(Texture texture, Vector2 position) =>
         RenderSprite(texture, position, Vector2.One, 0, Vector4.One);
     public abstract void RenderSprite(Texture texture, Vector2 position, Vector2 scale, float rotation, Vector4 color);
-    public abstract void RenderSprite(Texture texture, Rectangle<float> rect, float rotation, Vector4 color);
+    public abstract void RenderTexRect(Texture texture, Rectangle<float> rect, float rotation, Vector4 color);
+    public abstract void RenderTexRect(Texture texture, Vector2 position, Vector2 size, float rotation, Vector4 color);
     public abstract void RenderRect(Vector2 position, Vector2 size, float rotation, Vector4 color);
     public abstract void RenderRect(Rectangle<float> rect, float rotation, Vector4 color);
     public abstract void RenderLine(Vector2 from, Vector2 to, float width, Vector4 color);
