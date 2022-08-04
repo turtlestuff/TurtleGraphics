@@ -108,7 +108,6 @@ void OnRender(double deltaTime)
         ref var turtle = ref turtles[i];
         var relPos = turtle.Pos - camera;
         var centerPos = relPos + ((Vector2)tex.Size) / 2f;
-        //renderer.RenderLine(centerPos, centerPos + turtle.Dir / 2, 5, turtle.Col);
         renderer.RenderLine(centerPos, centerPos + turtle.Dir / 2, 5, turtle.Col);
         renderer.RenderSprite(tex, relPos, Vector2.One, turtle.Angle, turtle.Col);
     }
