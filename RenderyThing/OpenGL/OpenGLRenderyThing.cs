@@ -1,5 +1,3 @@
-using System.Diagnostics;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
@@ -26,8 +24,8 @@ public unsafe sealed class OpenGLRenderer : Renderer
     readonly VertexArrayObject _quadVao;
     readonly VertexBufferObject _quadVbo;
 
-    readonly VertexArrayObject _dynLineVao;
-    readonly VertexBufferObject _dynLineVbo;
+    readonly VertexArrayObject _dynVao;
+    readonly VertexBufferObject _dynVbo;
 
     readonly ShaderProgram _texQuadProgram;
     readonly ShaderProgram _solidProgram;
@@ -56,8 +54,8 @@ public unsafe sealed class OpenGLRenderer : Renderer
         //defines the array as having Vector2, basically
         _quadVao.VertexAttribPointer(0, 2, VertexAttribPointerType.Float, false, 2, 0);
 
-        _dynLineVbo = new VertexBufferObject(_gl, BufferUsageARB.DynamicDraw);
-        _dynLineVao = new VertexArrayObject(_gl, _quadVbo);
+        _dynVbo = new VertexBufferObject(_gl, BufferUsageARB.DynamicDraw);
+        _dynVao = new VertexArrayObject(_gl, _quadVbo);
 
         //create shaders
         _texQuadProgram = new ShaderProgram(_gl, texQuadVS, texQuadFS);
@@ -127,9 +125,29 @@ public unsafe sealed class OpenGLRenderer : Renderer
         _texQuadProgram.SetColor(ref color);
         
         tex.Use();
-        _gl.DrawArrays(PrimitiveType.Triangles, 0, 6);  
+        _gl.DrawArrays(PrimitiveType.Triangles, 0, 6);
     }
 
+    public override void RenderSprite(Texture texture, Rectangle<float> rect, float rotation, Vector4 color)
+    {
+        if (texture is not OpenGLTexture tex)
+        {
+            throw new RendererException($"invalid texture type: expected OpenGLTexture and got {texture.GetType().Name}");
+        }
+        _texQuadProgram.Use();
+        _quadVao.Bind();
+
+        var actualSize = new Vector2(rect.Size.X, rect.Size.Y);
+        var modelMatrix = GLHelper.ModelMatrix((Vector2) rect.Origin, rotation, actualSize);
+        _texQuadProgram.SetModel(&modelMatrix);
+        _texQuadProgram.SetColor(ref color);
+        
+        tex.Use();
+        _gl.DrawArrays(PrimitiveType.Triangles, 0, 6);
+    }
+
+    public override void RenderRect(Rectangle<float> rect, float rotation, Vector4 color) =>
+        RenderRect((Vector2) rect.Origin, (Vector2) rect.Size, rotation, color);
     public override void RenderRect(Vector2 position, Vector2 size, float rotation, Vector4 color)
     {
         _solidProgram.Use();
@@ -143,6 +161,7 @@ public unsafe sealed class OpenGLRenderer : Renderer
     }
 
     static Vector2 Normal(Vector2 vec) => new(-vec.Y, vec.X);
+
     public override void RenderLine(Vector2 from, Vector2 to, float width, Vector4 color)
     {
         var lineVec = Vector2.Normalize(to - from);
@@ -152,16 +171,16 @@ public unsafe sealed class OpenGLRenderer : Renderer
         var to1 = to + normal;
         var to2 = to - normal;
 
-        ReadOnlySpan<float> vertices = stackalloc float[12]
+        ReadOnlySpan<Vector2> vertices = stackalloc Vector2[6]
         {
-            from1.X, from1.Y,   from2.X, from2.Y,   to1.X,   to1.Y,
-            to1.X,   to1.Y,     to2.X,   to2.Y,     from2.X, from2.Y
+            from1, from2, to1,
+            to1,   to2,   from2
         };
 
-        _dynLineVao.Bind();
-        _dynLineVbo.Bind();
-        _dynLineVbo.BufferData(vertices);
-        _dynLineVao.VertexAttribPointer(0, 2, VertexAttribPointerType.Float, false, 2, 0);
+        _dynVao.Bind();
+        _dynVbo.Bind();
+        _dynVbo.BufferData(MemoryMarshal.Cast<Vector2, float>(vertices));
+        _dynVao.VertexAttribPointer(0, 2, VertexAttribPointerType.Float, false, 2, 0);
 
         _solidProgram.Use();
         var modelMatrix = Matrix4x4.Identity;
@@ -171,7 +190,7 @@ public unsafe sealed class OpenGLRenderer : Renderer
         _gl.DrawArrays(PrimitiveType.Triangles, 0, 6);
     }
 
-    public override void RenderLines(Vector2[] points, bool loop, float width, Vector4 color)
+    public override void RenderLines(Span<Vector2> points, bool loop, float width, Vector4 color)
     {
         if (points.Length < 2)
         {
@@ -230,10 +249,10 @@ public unsafe sealed class OpenGLRenderer : Renderer
             vertices[v++] = from - fromOffset; 
         }
 
-        _dynLineVao.Bind();
-        _dynLineVbo.Bind();
-        _dynLineVbo.BufferData(MemoryMarshal.Cast<Vector2, float>(vertices));
-        _dynLineVao.VertexAttribPointer(0, 2, VertexAttribPointerType.Float, false, 2, 0);
+        _dynVao.Bind();
+        _dynVbo.Bind();
+        _dynVbo.BufferData(MemoryMarshal.Cast<Vector2, float>(vertices));
+        _dynVao.VertexAttribPointer(0, 2, VertexAttribPointerType.Float, false, 2, 0);
 
         _solidProgram.Use();
         var modelMatrix = Matrix4x4.Identity;
@@ -243,9 +262,72 @@ public unsafe sealed class OpenGLRenderer : Renderer
         _gl.DrawArrays(PrimitiveType.Triangles, 0, (uint) numberOfIterations * 6);
     }
 
-    public void RenderAtlas(Font font)
+    void RenderSortedConvexSolidPoly(Span<Vector2> points, Vector4 color) 
     {
-        _textRenderer.RenderAtlas((GLStbttFont) font);
+        var iterations = points.Length - 2;
+        Span<Vector2> vertices = stackalloc Vector2[iterations * 3];
+        var c = 0;
+        var first = points[0];
+        for (var i = 0; i < iterations; i++)
+        {
+            vertices[c++] = first;
+            vertices[c++] = points[i + 1];
+            vertices[c++] = points[i + 2];
+        }
+
+        _dynVao.Bind();
+        _dynVbo.Bind();
+        _dynVbo.BufferData(MemoryMarshal.Cast<Vector2, float>(vertices));
+        _dynVao.VertexAttribPointer(0, 2, VertexAttribPointerType.Float, false, 2, 0);
+
+        _solidProgram.Use();
+        var modelMatrix = Matrix4x4.Identity;
+        _solidProgram.SetModel(&modelMatrix);
+        _solidProgram.SetColor(ref color);
+
+        _gl.DrawArrays(PrimitiveType.Triangles, 0, (uint) iterations * 3);
+    }
+
+    public override void RenderConvexSolidPoly(Span<Vector2> points, Vector4 color)
+    {
+        if (points.Length < 3)
+        {
+            throw new RendererException("Polygon must have at least 3 points");
+        }
+        var center = Vector2.Zero;
+        foreach (var v in points)
+        {
+            center += v;
+        }
+        center /= points.Length;
+
+        Span<float> angles = stackalloc float[points.Length];
+
+        for (var i = 0; i < points.Length; i++)
+        {
+            var vec = points[i] - center;
+            angles[i] = MathF.Atan2(vec.Y, vec.X);
+        }
+
+        Span<Vector2> sortedPts = stackalloc Vector2[points.Length];
+        points.CopyTo(sortedPts);
+        angles.Sort(sortedPts);
+
+        RenderSortedConvexSolidPoly(sortedPts, color);
+    }
+
+    public override void RenderSolidRegularNgon(Vector2 center, float radius, int sides, float rotation, Vector4 color)
+    {
+        Span<Vector2> points = stackalloc Vector2[sides];
+        var angleDiff = MathF.Tau / sides;
+        for (var i = 0; i < sides; i++)
+        {
+            var angle = MathF.IEEERemainder(rotation + angleDiff * i, MathF.Tau);
+            var (sin, cos) = MathF.SinCos(angle);
+            points[i] = center + new Vector2(cos, sin) * radius;
+        }
+
+        RenderSortedConvexSolidPoly(points, color);
     }
 
     public override Vector2 MeasureText(string text, Font font, float size)
@@ -276,8 +358,8 @@ public unsafe sealed class OpenGLRenderer : Renderer
         _solidProgram.Dispose();
         _quadVbo.Dispose();
         _quadVao.Dispose();
-        _dynLineVbo.Dispose();
-        _dynLineVao.Dispose();
+        _dynVbo.Dispose();
+        _dynVao.Dispose();
         foreach(var (_, tex) in _textures)
         {
             tex.Dispose();

@@ -2,7 +2,6 @@
 using System.Drawing;
 using System.Numerics;
 using RenderyThing;
-using RenderyThing.OpenGL;
 using Silk.NET.Input;
 using Silk.NET.Windowing;
 
@@ -108,10 +107,13 @@ void OnRender(double deltaTime)
         ref var turtle = ref turtles[i];
         var relPos = turtle.Pos - camera;
         var centerPos = relPos + ((Vector2)tex.Size) / 2f;
-        renderer.RenderLine(centerPos, centerPos + turtle.Dir / 2, 5, turtle.Col);
+        var endOfLine = centerPos + turtle.Dir / 2f;
+        
+        renderer.RenderLine(centerPos, endOfLine, 5, turtle.Col);
+        renderer.RenderSolidRegularNgon(endOfLine, 10, 3, MathF.Atan2(turtle.Dir.Y, turtle.Dir.X), turtle.Col);
+
         renderer.RenderSprite(tex, relPos, Vector2.One, turtle.Angle, turtle.Col);
     }
-    renderer.RenderLines(new[] { new(30), lastMousePos, ((Vector2)renderer.Size) - new Vector2(50), new(30, 300)}, true, 10, Vector4.One) ;
     var str = $"Render time: {renderTimes.Average():F3} ms; {frameRates.Average():F3} FPS";
     var size = 16f;
     renderer.RenderText(str, Vector2.Zero, font, size, Vector4.One);

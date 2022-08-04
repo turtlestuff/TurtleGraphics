@@ -1,10 +1,4 @@
-using System.ComponentModel;
-using System.ComponentModel.DataAnnotations.Schema;
-using System.Runtime.InteropServices;
-using System.Runtime.Serialization;
-using System.Security.Cryptography.X509Certificates;
 using Silk.NET.OpenGL;
-using Silk.NET.SDL;
 
 namespace RenderyThing.OpenGL;
 
@@ -66,6 +60,7 @@ unsafe class GLTextRenderer
         _fontShader.SetProjection(&projMat);
         _scale = scale;
     }
+
     public void RenderAtlas(GLStbttFont font)
     {
         _renderer.RenderSprite(new OpenGLTexture(font._altasTexHandle, new((int) font._atlasSize), _gl, new()), Vector2.Zero, Vector2.One, 0f, new(1,1,1,0.5f));

@@ -1,6 +1,4 @@
-using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using Silk.NET.OpenGL;
 using static StbTrueTypeSharp.StbTrueType; //StbTrueType.stbtt_Whatever is a mouthful
