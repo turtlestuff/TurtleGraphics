@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
@@ -141,16 +142,15 @@ public unsafe sealed class OpenGLRenderer : Renderer
         _gl.DrawArrays(PrimitiveType.Triangles, 0, 6);
     }
 
+    static Vector2 Normal(Vector2 vec) => new(-vec.Y, vec.X);
     public override void RenderLine(Vector2 from, Vector2 to, float width, Vector4 color)
     {
-        var theta = MathF.Atan2(from.Y - to.Y, from.X - to.X) + MathF.PI / 2; //orthogonal angle
-        var (sin, cos) = MathF.SinCos(theta);
-        var vec1 = new Vector2(cos, sin) * (width / 2f); //vector in that direction
-        var vec2 = -vec1; //also opposite
-        var from1 = from + vec1;
-        var from2 = from + vec2;
-        var to1 = to + vec1;
-        var to2 = to + vec2;
+        var lineVec = Vector2.Normalize(to - from);
+        var normal = Normal(lineVec) * width / 2f;
+        var from1 = from + normal;
+        var from2 = from - normal;
+        var to1 = to + normal;
+        var to2 = to - normal;
 
         ReadOnlySpan<float> vertices = stackalloc float[12]
         {
@@ -169,6 +169,78 @@ public unsafe sealed class OpenGLRenderer : Renderer
         _solidProgram.SetColor(ref color);
 
         _gl.DrawArrays(PrimitiveType.Triangles, 0, 6);
+    }
+
+    public override void RenderLines(Vector2[] points, bool loop, float width, Vector4 color)
+    {
+        if (points.Length < 2)
+        {
+            throw new RendererException("there must be at least two points to render a line");
+        }
+        if (points.Length == 2)
+        {
+            RenderLine(points[0], points[1], width, color);
+            return;
+        }
+
+
+        var numberOfIterations = loop ? points.Length : points.Length - 1;
+
+        Span<Vector2> vertices = stackalloc Vector2[numberOfIterations * 6];
+        var v = 0;
+        var hWidth = width / 2f;
+
+        for (var i = 0; i < numberOfIterations; i++)
+        {
+            var from = points[i];
+            var to = i == points.Length - 1 ? points[0] : points[i + 1];
+            Vector2 fromOffset;
+            Vector2 toOffset;
+            var line = Vector2.Normalize(to - from);
+            var normal = Normal(line);
+            if (!loop && i == 0)
+            {
+                fromOffset = normal * hWidth;
+            }
+            else 
+            {
+                var prev = i == 0 ? points[^1] : points[i - 1];
+                var miter = Normal(Vector2.Normalize(Vector2.Normalize(from - prev) + line)); 
+                var len = hWidth / Vector2.Dot(normal, miter);
+                fromOffset = miter * len;
+            }
+            if (!loop && i >= points.Length - 2)
+            {
+                toOffset = normal * hWidth;
+            }
+            else
+            {
+                var next = i >= points.Length - 2 ? points[i - points.Length + 2] : points[i + 2];
+                var miter = Normal(Vector2.Normalize(Vector2.Normalize(next - to) + line)); 
+                var len = hWidth / Vector2.Dot(normal, miter);
+                toOffset = miter * len;
+            }
+
+            vertices[v++] = from + fromOffset;
+            vertices[v++] = from - fromOffset;
+            vertices[v++] = to + toOffset;
+
+            vertices[v++] = to + toOffset;
+            vertices[v++] = to - toOffset;
+            vertices[v++] = from - fromOffset; 
+        }
+
+        _dynLineVao.Bind();
+        _dynLineVbo.Bind();
+        _dynLineVbo.BufferData(MemoryMarshal.Cast<Vector2, float>(vertices));
+        _dynLineVao.VertexAttribPointer(0, 2, VertexAttribPointerType.Float, false, 2, 0);
+
+        _solidProgram.Use();
+        var modelMatrix = Matrix4x4.Identity;
+        _solidProgram.SetModel(&modelMatrix);
+        _solidProgram.SetColor(ref color);
+
+        _gl.DrawArrays(PrimitiveType.Triangles, 0, (uint) numberOfIterations * 6);
     }
 
     public void RenderAtlas(Font font)

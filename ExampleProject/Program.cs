@@ -109,20 +109,20 @@ void OnRender(double deltaTime)
         var relPos = turtle.Pos - camera;
         var centerPos = relPos + ((Vector2)tex.Size) / 2f;
         //renderer.RenderLine(centerPos, centerPos + turtle.Dir / 2, 5, turtle.Col);
+        renderer.RenderLine(centerPos, centerPos + turtle.Dir / 2, 5, turtle.Col);
         renderer.RenderSprite(tex, relPos, Vector2.One, turtle.Angle, turtle.Col);
     }
-    var str = $"Position: {camera.X}, {camera.Y}";
+    renderer.RenderLines(new[] { new(30), lastMousePos, ((Vector2)renderer.Size) - new Vector2(50), new(30, 300)}, true, 10, Vector4.One) ;
+    var str = $"Render time: {renderTimes.Average():F3} ms; {frameRates.Average():F3} FPS";
     var size = 16f;
-    var textSize = renderer.MeasureText(str, font, size);
-    var textPos = new Vector2((renderer.Size.X - textSize.X) / 2f, 0f);
-    renderer.RenderRect(textPos, textSize, 0f, new(1f, 0.2f, 0f, 0.5f));
-    renderer.RenderText(str, textPos, font, size, Vector4.One);
+    renderer.RenderText(str, Vector2.Zero, font, size, Vector4.One);
+    
     stopwatch.Stop();
     renderTimes[avgIndex] = stopwatch.Elapsed.TotalMilliseconds;
     frameRates[avgIndex++] = 1 / deltaTime;
+    
     if (avgIndex == avgOver)
     {   
-        Console.WriteLine($"render time: {renderTimes.Average():F3} ms | frame rate: {frameRates.Average():F3} FPS (avg. over {avgOver} frames)");
         avgIndex = 0;
     }
 }

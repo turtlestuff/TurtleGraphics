@@ -61,6 +61,7 @@ public abstract class Renderer : IDisposable
     public abstract void RenderSprite(Texture texture, Vector2 position, Vector2 scale, float rotation, Vector4 color);
     public abstract void RenderRect(Vector2 position, Vector2 size, float rotation, Vector4 color);
     public abstract void RenderLine(Vector2 from, Vector2 to, float width, Vector4 color);
+    public abstract void RenderLines(Vector2[] lines, bool loop, float width, Vector4 color);
     public abstract void RenderText(string text, Vector2 position, Font font, float size, Vector4 color);
 
     public abstract void Clear(Vector4 color);
