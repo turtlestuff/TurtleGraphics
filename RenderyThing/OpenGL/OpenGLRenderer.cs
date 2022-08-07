@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using System.Runtime.Intrinsics;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
 
@@ -243,9 +244,8 @@ public unsafe sealed class OpenGLRenderer : Renderer
         DrawSolidVertices(vertices, color);
     }
 
-    public override void DrawSolidRegularNGon(Vector2 center, float radius, int sides, float rotation, Vector4 color)
+    void SolidRegularNGon(Vector2 center, float radius, int sides, float rotation, Span<Vector2> points)
     {
-        Span<Vector2> points = stackalloc Vector2[sides];
         var angleDiff = MathF.Tau / sides;
         for (var i = 0; i < sides; i++)
         {
@@ -253,8 +253,20 @@ public unsafe sealed class OpenGLRenderer : Renderer
             var (sin, cos) = MathF.SinCos(angle);
             points[i] = center + new Vector2(cos, sin) * radius;
         }
+    }
 
+    public override void DrawSolidRegularNGon(Vector2 center, float radius, int sides, float rotation, Vector4 color)
+    {
+        Span<Vector2> points = stackalloc Vector2[sides];
+        SolidRegularNGon(center, radius, sides, rotation, points);
         DrawSolidConvexPoly(points, color);
+    }
+
+    public override void DrawRegularNGonLines(Vector2 center, float radius, int sides, float rotation, float width, Vector4 color)
+    {
+        Span<Vector2> points = stackalloc Vector2[sides];
+        SolidRegularNGon(center, radius, sides, rotation, points);
+        DrawSolidLines(points, true, width, color);
     }
 
     public override void DrawSolidVertices(ReadOnlySpan<Vector2> triVertices, Vector4 color)

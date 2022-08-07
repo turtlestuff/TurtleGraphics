@@ -114,6 +114,7 @@ void OnRender(double deltaTime)
 
         renderer.DrawSprite(tex, relPos, Vector2.One, turtle.Angle, turtle.Col);
     }
+    renderer.DrawRegularNGonLines(renderer.Size.ToSystemF() / 2f, Math.Min(renderer.Size.X, renderer.Size.Y) / 2f, 256, 0f, 2f, Vector4.One);
     var str = $"Render time: {renderTimes.Average():F3} ms; {frameRates.Average():F3} FPS";
     var size = 16f;
     renderer.DrawText(str, Vector2.Zero, font, size, Vector4.One);

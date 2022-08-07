@@ -68,7 +68,7 @@ public abstract class Renderer : IDisposable
     public abstract void DrawSolidConvexPoly(ReadOnlySpan<Vector2> points, Vector4 color);
     public abstract void DrawSolidRegularNGon(Vector2 center, float radius, int sides, float rotation, Vector4 color);
     public abstract void DrawSolidVertices(ReadOnlySpan<Vector2> triVertices, Vector4 color);
-    
+    public abstract void DrawRegularNGonLines(Vector2 center, float radius, int sides, float rotation, float width, Vector4 color);
     public abstract void DrawText(string text, Vector2 position, Font font, float size, Vector4 color);
 
     public abstract void Clear(Vector4 color);
