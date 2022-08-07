@@ -101,7 +101,7 @@ void OnRender(double deltaTime)
     stopwatch.Start();
     renderer.Clear(Color.Black.ToVector4());
     var tex = renderer.GetTexture("turtle");
-    renderer.RenderRect(-camera, new(worldSize), 0, Color.CornflowerBlue.ToVector4());
+    renderer.DrawSolidRect(-camera, new(worldSize), 0, Color.CornflowerBlue.ToVector4());
     for (var i = 0; i < numTurtles; i++)
     {
         ref var turtle = ref turtles[i];
@@ -109,14 +109,14 @@ void OnRender(double deltaTime)
         var centerPos = relPos + ((Vector2)tex.Size) / 2f;
         var endOfLine = centerPos + turtle.Dir / 2f;
         
-        renderer.RenderLine(centerPos, endOfLine, 5, turtle.Col);
-        renderer.RenderSolidRegularNgon(endOfLine, 10, 3, MathF.Atan2(turtle.Dir.Y, turtle.Dir.X), turtle.Col);
+        renderer.DrawSolidLine(centerPos, endOfLine, 5, turtle.Col);
+        renderer.DrawSolidRegularNGon(endOfLine, 10, 3, MathF.Atan2(turtle.Dir.Y, turtle.Dir.X), turtle.Col);
 
-        renderer.RenderSprite(tex, relPos, Vector2.One, turtle.Angle, turtle.Col);
+        renderer.DrawSprite(tex, relPos, Vector2.One, turtle.Angle, turtle.Col);
     }
     var str = $"Render time: {renderTimes.Average():F3} ms; {frameRates.Average():F3} FPS";
     var size = 16f;
-    renderer.RenderText(str, Vector2.Zero, font, size, Vector4.One);
+    renderer.DrawText(str, Vector2.Zero, font, size, Vector4.One);
     
     stopwatch.Stop();
     renderTimes[avgIndex] = stopwatch.Elapsed.TotalMilliseconds;

@@ -56,19 +56,20 @@ public abstract class Renderer : IDisposable
     public abstract Vector2 MeasureText(string text, Font font, float size);
 
 
-    public void RenderSprite(Texture texture, Vector2 position) =>
-        RenderSprite(texture, position, Vector2.One, 0, Vector4.One);
-    public abstract void RenderSprite(Texture texture, Vector2 position, Vector2 scale, float rotation, Vector4 color);
-    public abstract void RenderTexRect(Texture texture, Rectangle<float> rect, float rotation, Vector4 color);
-    public abstract void RenderTexRect(Texture texture, Vector2 position, Vector2 size, float rotation, Vector4 color);
-    public abstract void RenderRect(Vector2 position, Vector2 size, float rotation, Vector4 color);
-    public abstract void RenderRect(Rectangle<float> rect, float rotation, Vector4 color);
-    public abstract void RenderLine(Vector2 from, Vector2 to, float width, Vector4 color);
-    public abstract void RenderLines(Span<Vector2> lines, bool loop, float width, Vector4 color);
-    public abstract void RenderConvexSolidPoly(Span<Vector2> points, Vector4 color);
-    public abstract void RenderSolidRegularNgon(Vector2 center, float radius, int sides, float rotation, Vector4 color);
+    public void DrawSprite(Texture texture, Vector2 position) =>
+        DrawSprite(texture, position, Vector2.One, 0, Vector4.One);
+    public abstract void DrawSprite(Texture texture, Vector2 position, Vector2 scale, float rotation, Vector4 color);
+    public abstract void DrawTextureRect(Texture texture, Rectangle<float> rect, float rotation, Vector4 color);
+    public abstract void DrawTextureRect(Texture texture, Vector2 position, Vector2 size, float rotation, Vector4 color);
+    public abstract void DrawSolidRect(Vector2 position, Vector2 size, float rotation, Vector4 color);
+    public abstract void DrawSolidRect(Rectangle<float> rect, float rotation, Vector4 color);
+    public abstract void DrawSolidLine(Vector2 from, Vector2 to, float width, Vector4 color);
+    public abstract void DrawSolidLines(ReadOnlySpan<Vector2> lines, bool loop, float width, Vector4 color);
+    public abstract void DrawSolidConvexPoly(ReadOnlySpan<Vector2> points, Vector4 color);
+    public abstract void DrawSolidRegularNGon(Vector2 center, float radius, int sides, float rotation, Vector4 color);
+    public abstract void DrawSolidVertices(ReadOnlySpan<Vector2> triVertices, Vector4 color);
     
-    public abstract void RenderText(string text, Vector2 position, Font font, float size, Vector4 color);
+    public abstract void DrawText(string text, Vector2 position, Font font, float size, Vector4 color);
 
     public abstract void Clear(Vector4 color);
     

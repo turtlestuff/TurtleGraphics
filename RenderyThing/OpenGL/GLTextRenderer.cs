@@ -63,7 +63,7 @@ unsafe class GLTextRenderer
 
     public void RenderAtlas(GLStbttFont font)
     {
-        _renderer.RenderSprite(new OpenGLTexture(font._altasTexHandle, new((int) font._atlasSize), _gl, new()), Vector2.Zero, Vector2.One, 0f, new(1,1,1,0.5f));
+        _renderer.DrawSprite(new OpenGLTexture(font._altasTexHandle, new((int) font._atlasSize), _gl, new()), Vector2.Zero, Vector2.One, 0f, new(1,1,1,0.5f));
     }
 
     public static Vector2 MeasureString(string text, GLStbttFont font, float size)

@@ -110,13 +110,13 @@ public unsafe sealed class OpenGLRenderer : Renderer
         _textRenderer.UpdateProjectionMatrix(FramebufferSize, Scale); // text renderer renders at pixel resolution
     }
 
-    public override void RenderSprite(Texture texture, Vector2 position, Vector2 scale, float rotation, Vector4 color) =>
-        RenderTexRect(texture, position, texture.Size.ToSystemF() * scale, rotation, color);
+    public override void DrawSprite(Texture texture, Vector2 position, Vector2 scale, float rotation, Vector4 color) =>
+        DrawTextureRect(texture, position, texture.Size.ToSystemF() * scale, rotation, color);
 
-    public override void RenderTexRect(Texture texture, Rectangle<float> rect, float rotation, Vector4 color) =>
-        RenderTexRect(texture, rect.Origin.ToSystem(), rect.Origin.ToSystem(), rotation, color);
+    public override void DrawTextureRect(Texture texture, Rectangle<float> rect, float rotation, Vector4 color) =>
+        DrawTextureRect(texture, rect.Origin.ToSystem(), rect.Origin.ToSystem(), rotation, color);
 
-    public override void RenderTexRect(Texture texture, Vector2 position, Vector2 size, float rotation, Vector4 color)
+    public override void DrawTextureRect(Texture texture, Vector2 position, Vector2 size, float rotation, Vector4 color)
     {
         if (texture is not OpenGLTexture tex)
         {
@@ -134,9 +134,9 @@ public unsafe sealed class OpenGLRenderer : Renderer
         _gl.DrawArrays(PrimitiveType.Triangles, 0, 6);
     }
 
-    public override void RenderRect(Rectangle<float> rect, float rotation, Vector4 color) =>
-        RenderRect((Vector2) rect.Origin, (Vector2) rect.Size, rotation, color);
-    public override void RenderRect(Vector2 position, Vector2 size, float rotation, Vector4 color)
+    public override void DrawSolidRect(Rectangle<float> rect, float rotation, Vector4 color) =>
+        DrawSolidRect((Vector2) rect.Origin, (Vector2) rect.Size, rotation, color);
+    public override void DrawSolidRect(Vector2 position, Vector2 size, float rotation, Vector4 color)
     {
         _solidProgram.Use();
         _quadVao.Bind();
@@ -148,7 +148,7 @@ public unsafe sealed class OpenGLRenderer : Renderer
         _gl.DrawArrays(PrimitiveType.Triangles, 0, 6);
     }
 
-    public override void RenderLine(Vector2 from, Vector2 to, float width, Vector4 color)
+    public override void DrawSolidLine(Vector2 from, Vector2 to, float width, Vector4 color)
     {
         var lineVec = Vector2.Normalize(to - from);
         var normal = lineVec.Normal() * width / 2f;
@@ -163,20 +163,10 @@ public unsafe sealed class OpenGLRenderer : Renderer
             to1,   to2,   from2
         };
 
-        _dynVao.Bind();
-        _dynVbo.Bind();
-        _dynVbo.BufferData(MemoryMarshal.Cast<Vector2, float>(vertices));
-        _dynVao.VertexAttribPointer(0, 2, VertexAttribPointerType.Float, false, 2, 0);
-
-        _solidProgram.Use();
-        var modelMatrix = Matrix4x4.Identity;
-        _solidProgram.SetModel(&modelMatrix);
-        _solidProgram.SetColor(ref color);
-
-        _gl.DrawArrays(PrimitiveType.Triangles, 0, 6);
+        DrawSolidVertices(vertices, color);
     }
 
-    public override void RenderLines(Span<Vector2> points, bool loop, float width, Vector4 color)
+    public override void DrawSolidLines(ReadOnlySpan<Vector2> points, bool loop, float width, Vector4 color)
     {
         if (points.Length < 2)
         {
@@ -184,10 +174,9 @@ public unsafe sealed class OpenGLRenderer : Renderer
         }
         if (points.Length == 2)
         {
-            RenderLine(points[0], points[1], width, color);
+            DrawSolidLine(points[0], points[1], width, color);
             return;
         }
-
 
         var numberOfIterations = loop ? points.Length : points.Length - 1;
 
@@ -235,20 +224,10 @@ public unsafe sealed class OpenGLRenderer : Renderer
             vertices[v++] = from - fromOffset; 
         }
 
-        _dynVao.Bind();
-        _dynVbo.Bind();
-        _dynVbo.BufferData(MemoryMarshal.Cast<Vector2, float>(vertices));
-        _dynVao.VertexAttribPointer(0, 2, VertexAttribPointerType.Float, false, 2, 0);
-
-        _solidProgram.Use();
-        var modelMatrix = Matrix4x4.Identity;
-        _solidProgram.SetModel(&modelMatrix);
-        _solidProgram.SetColor(ref color);
-
-        _gl.DrawArrays(PrimitiveType.Triangles, 0, (uint) numberOfIterations * 6);
+        DrawSolidVertices(vertices, color);
     }
 
-    void RenderSortedConvexSolidPoly(Span<Vector2> points, Vector4 color) 
+    public override void DrawSolidConvexPoly(ReadOnlySpan<Vector2> points, Vector4 color)
     {
         var iterations = points.Length - 2;
         Span<Vector2> vertices = stackalloc Vector2[iterations * 3];
@@ -261,48 +240,10 @@ public unsafe sealed class OpenGLRenderer : Renderer
             vertices[c++] = points[i + 2];
         }
 
-        _dynVao.Bind();
-        _dynVbo.Bind();
-        _dynVbo.BufferData(MemoryMarshal.Cast<Vector2, float>(vertices));
-        _dynVao.VertexAttribPointer(0, 2, VertexAttribPointerType.Float, false, 2, 0);
-
-        _solidProgram.Use();
-        var modelMatrix = Matrix4x4.Identity;
-        _solidProgram.SetModel(&modelMatrix);
-        _solidProgram.SetColor(ref color);
-
-        _gl.DrawArrays(PrimitiveType.Triangles, 0, (uint) iterations * 3);
+        DrawSolidVertices(vertices, color);
     }
 
-    public override void RenderConvexSolidPoly(Span<Vector2> points, Vector4 color)
-    {
-        if (points.Length < 3)
-        {
-            throw new RendererException("Polygon must have at least 3 points");
-        }
-        var center = Vector2.Zero;
-        foreach (var v in points)
-        {
-            center += v;
-        }
-        center /= points.Length;
-
-        Span<float> angles = stackalloc float[points.Length];
-
-        for (var i = 0; i < points.Length; i++)
-        {
-            var vec = points[i] - center;
-            angles[i] = MathF.Atan2(vec.Y, vec.X);
-        }
-
-        Span<Vector2> sortedPts = stackalloc Vector2[points.Length];
-        points.CopyTo(sortedPts);
-        angles.Sort(sortedPts);
-
-        RenderSortedConvexSolidPoly(sortedPts, color);
-    }
-
-    public override void RenderSolidRegularNgon(Vector2 center, float radius, int sides, float rotation, Vector4 color)
+    public override void DrawSolidRegularNGon(Vector2 center, float radius, int sides, float rotation, Vector4 color)
     {
         Span<Vector2> points = stackalloc Vector2[sides];
         var angleDiff = MathF.Tau / sides;
@@ -313,7 +254,22 @@ public unsafe sealed class OpenGLRenderer : Renderer
             points[i] = center + new Vector2(cos, sin) * radius;
         }
 
-        RenderSortedConvexSolidPoly(points, color);
+        DrawSolidConvexPoly(points, color);
+    }
+
+    public override void DrawSolidVertices(ReadOnlySpan<Vector2> triVertices, Vector4 color)
+    {
+        _dynVao.Bind();
+        _dynVbo.Bind();
+        _dynVbo.BufferData(MemoryMarshal.Cast<Vector2, float>(triVertices));
+        _dynVao.VertexAttribPointer(0, 2, VertexAttribPointerType.Float, false, 2, 0);
+
+        _solidProgram.Use();
+        var modelMatrix = Matrix4x4.Identity;
+        _solidProgram.SetModel(&modelMatrix);
+        _solidProgram.SetColor(ref color);
+
+        _gl.DrawArrays(PrimitiveType.Triangles, 0, (uint) triVertices.Length);    
     }
 
     public override Vector2 MeasureText(string text, Font font, float size)
@@ -324,7 +280,7 @@ public unsafe sealed class OpenGLRenderer : Renderer
         return GLTextRenderer.MeasureString(text, glFont, size);
     }
 
-    public override void RenderText(string text, Vector2 position, Font font, float size, Vector4 color)
+    public override void DrawText(string text, Vector2 position, Font font, float size, Vector4 color)
     {
         if (font is not GLStbttFont glFont)
             throw new RendererException("Font is not OpenGL font");
