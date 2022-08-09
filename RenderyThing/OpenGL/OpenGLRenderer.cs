@@ -79,7 +79,8 @@ public unsafe sealed class OpenGLRenderer : Renderer
         UpdateProjectionMatrix();
         CameraPropertyChanged += UpdateProjectionMatrix;
 
-        _gl.DebugMessageCallback(DebugCallback, null);
+        //Todo: OpenGL 4.3 feature not supported on macos
+        //_gl.DebugMessageCallback(DebugCallback, null);
     }
 
     public static void DebugCallback(GLEnum source, GLEnum type, int _, GLEnum severity, int length, nint message, nint __)
