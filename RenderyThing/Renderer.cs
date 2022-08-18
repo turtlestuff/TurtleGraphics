@@ -63,8 +63,18 @@ public abstract class Renderer : IDisposable
     public abstract void DrawTextureRect(Texture texture, Vector2 position, Vector2 size, float rotation, Vector4 color);
     public abstract void DrawSolidRect(Vector2 position, Vector2 size, float rotation, Vector4 color);
     public abstract void DrawSolidRect(Rectangle<float> rect, float rotation, Vector4 color);
-    public abstract void DrawSolidLine(Vector2 from, Vector2 to, float width, Vector4 color);
-    public abstract void DrawSolidLines(ReadOnlySpan<Vector2> lines, bool loop, float width, Vector4 color);
+    public virtual void DrawSolidLine(Vector2 from, Vector2 to, float width, Vector4 color)
+    {
+        Span<Vector2> vtxs = stackalloc Vector2[Shapes.LineVtxCount()];
+        Shapes.Line(from, to, width, vtxs);
+        DrawSolidVertices(vtxs, color);
+    }
+    public virtual void DrawSolidLines(ReadOnlySpan<Vector2> points, bool loop, float width, Vector4 color)
+    {
+        Span<Vector2> vtxs = stackalloc Vector2[Shapes.LinesMiterVtxCount(points.Length, loop)];
+        Shapes.LinesMiter(points, width, loop, vtxs);
+        DrawSolidVertices(vtxs, color);
+    }
     public abstract void DrawSolidConvexPoly(ReadOnlySpan<Vector2> points, Vector4 color);
     public abstract void DrawSolidRegularNGon(Vector2 center, float radius, int sides, float rotation, Vector4 color);
     public abstract void DrawSolidVertices(ReadOnlySpan<Vector2> triVertices, Vector4 color);
