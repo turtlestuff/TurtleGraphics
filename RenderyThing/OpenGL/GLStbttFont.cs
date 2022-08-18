@@ -3,7 +3,7 @@ using System.Text;
 using Silk.NET.OpenGL;
 using static StbTrueTypeSharp.StbTrueType; //StbTrueType.stbtt_Whatever is a mouthful
 
-namespace RenderyThing.OpenGL;
+namespace TurtleGraphics.OpenGL;
 
 readonly struct AtlasEntry
 {

@@ -1,6 +1,6 @@
 using System.Drawing;
 
-namespace RenderyThing;
+namespace TurtleGraphics;
 
 public static class ColorHelper
 {

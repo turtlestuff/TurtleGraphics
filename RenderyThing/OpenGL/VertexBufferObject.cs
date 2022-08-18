@@ -1,7 +1,7 @@
 using Silk.NET.OpenGL;
 using System.Runtime.InteropServices;
 
-namespace RenderyThing.OpenGL;
+namespace TurtleGraphics.OpenGL;
 
 unsafe readonly struct VertexBufferObject : IDisposable
 {

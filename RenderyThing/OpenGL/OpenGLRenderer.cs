@@ -2,7 +2,7 @@ using System.Runtime.InteropServices;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
 
-namespace RenderyThing.OpenGL;
+namespace TurtleGraphics.OpenGL;
 
 public unsafe sealed class OpenGLRenderer : Renderer
 {   

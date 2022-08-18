@@ -1,7 +1,7 @@
 using Silk.NET.OpenGL;
 using SixLabors.ImageSharp.PixelFormats;
 
-namespace RenderyThing.OpenGL;
+namespace TurtleGraphics.OpenGL;
 
 public unsafe sealed class OpenGLTexture : Texture
 {

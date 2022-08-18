@@ -1,6 +1,6 @@
 using Silk.NET.Windowing;
 
-namespace RenderyThing;
+namespace TurtleGraphics;
 
 public class RendererException : Exception
 {

@@ -1,6 +1,6 @@
 using Silk.NET.OpenGL;
 
-namespace RenderyThing.OpenGL;
+namespace TurtleGraphics.OpenGL;
 
 unsafe class GLTextRenderer
 {
