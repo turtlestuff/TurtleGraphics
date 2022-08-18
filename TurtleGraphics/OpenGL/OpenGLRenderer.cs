@@ -32,7 +32,7 @@ public unsafe sealed class OpenGLRenderer : Renderer
     internal Matrix4x4 ProjectionMatrix { get; private set; }
 
     Stream GetResStream(string path) => 
-        GetType().Assembly.GetManifestResourceStream($"RenderyThing.OpenGL.{path}") ?? throw new FileNotFoundException($"{path} not found");
+        GetType().Assembly.GetManifestResourceStream($"TurtleGraphics.OpenGL.{path}") ?? throw new FileNotFoundException($"{path} not found");
 
     public OpenGLRenderer(IWindow window) : base(window)
     {

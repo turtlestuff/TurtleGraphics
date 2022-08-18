@@ -3,7 +3,7 @@ namespace TurtleGraphics.OpenGL;
 static class GLHelper
 {
     public static Stream GetResStream(string path) =>
-        typeof(GLHelper).Assembly.GetManifestResourceStream($"RenderyThing.OpenGL.{path}") ?? throw new FileNotFoundException($"{path} not found");
+        typeof(GLHelper).Assembly.GetManifestResourceStream($"TurtleGraphics.OpenGL.{path}") ?? throw new FileNotFoundException($"{path} not found");
 
     public static Matrix4x4 ModelMatrix(Vector2 position, float rotation, Vector2 size)
     {
