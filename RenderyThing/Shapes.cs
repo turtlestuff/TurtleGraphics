@@ -1,5 +1,3 @@
-using System.Reflection;
-
 namespace RenderyThing;
 
 public static class Shapes
@@ -82,4 +80,49 @@ public static class Shapes
             vertices[v++] = from - fromOffset; 
         }
     }
+
+    public static int TraingulateConvexVtxCount(int pointsAmt) => (pointsAmt - 2) * 3;
+
+    public static void TriangulateConvex(ReadOnlySpan<Vector2> points, in Span<Vector2> vertices)
+    {
+        var iterations = points.Length - 2;
+        var c = 0;
+        var first = points[0];
+        for (var i = 0; i < iterations; i++)
+        {
+            vertices[c++] = first;
+            vertices[c++] = points[i + 1];
+            vertices[c++] = points[i + 2];
+        }
+    }
+
+    public static void RegularNGonPoints(Vector2 center, float radius, int sides, float rotation, in Span<Vector2> points)
+    {
+        var angleDiff = MathF.Tau / sides;
+        for (var i = 0; i < sides; i++)
+        {
+            var angle = MathF.IEEERemainder(rotation + angleDiff * i, MathF.Tau);
+            var (sin, cos) = MathF.SinCos(angle);
+            points[i] = center + new Vector2(cos, sin) * radius;
+        }
+    }
+
+    public static int SolidRegularNGonVtxCount(int sides) => TraingulateConvexVtxCount(sides);
+
+    public static void SolidRegularNGon(Vector2 center, float radius, int sides, float rotation, in Span<Vector2> vertices)
+    {
+        Span<Vector2> points = stackalloc Vector2[sides];
+        RegularNGonPoints(center, radius, sides, rotation, points);
+        TriangulateConvex(points, vertices);
+    }
+
+    public static int RegularNGonOutlineVtxCount(int sides) => LinesMiterVtxCount(sides, true);
+
+    public static void RegularNGonOutline(Vector2 center, float radius, int sides, float rotation, float width, in Span<Vector2> vertices)
+    {
+        Span<Vector2> points = stackalloc Vector2[sides];
+        RegularNGonPoints(center, radius, sides, rotation, points);
+        LinesMiter(points, width, true, vertices);
+    }
+
 }

@@ -111,12 +111,6 @@ public unsafe sealed class OpenGLRenderer : Renderer
         _textRenderer.UpdateProjectionMatrix(FramebufferSize, Scale); // text renderer renders at pixel resolution
     }
 
-    public override void DrawSprite(Texture texture, Vector2 position, Vector2 scale, float rotation, Vector4 color) =>
-        DrawTextureRect(texture, position, texture.Size.ToSystemF() * scale, rotation, color);
-
-    public override void DrawTextureRect(Texture texture, Rectangle<float> rect, float rotation, Vector4 color) =>
-        DrawTextureRect(texture, rect.Origin.ToSystem(), rect.Origin.ToSystem(), rotation, color);
-
     public override void DrawTextureRect(Texture texture, Vector2 position, Vector2 size, float rotation, Vector4 color)
     {
         if (texture is not OpenGLTexture tex)
@@ -135,8 +129,6 @@ public unsafe sealed class OpenGLRenderer : Renderer
         _gl.DrawArrays(PrimitiveType.Triangles, 0, 6);
     }
 
-    public override void DrawSolidRect(Rectangle<float> rect, float rotation, Vector4 color) =>
-        DrawSolidRect((Vector2) rect.Origin, (Vector2) rect.Size, rotation, color);
     public override void DrawSolidRect(Vector2 position, Vector2 size, float rotation, Vector4 color)
     {
         _solidProgram.Use();
@@ -147,47 +139,6 @@ public unsafe sealed class OpenGLRenderer : Renderer
         _solidProgram.SetColor(ref color);
         
         _gl.DrawArrays(PrimitiveType.Triangles, 0, 6);
-    }
-
-    public override void DrawSolidConvexPoly(ReadOnlySpan<Vector2> points, Vector4 color)
-    {
-        var iterations = points.Length - 2;
-        Span<Vector2> vertices = stackalloc Vector2[iterations * 3];
-        var c = 0;
-        var first = points[0];
-        for (var i = 0; i < iterations; i++)
-        {
-            vertices[c++] = first;
-            vertices[c++] = points[i + 1];
-            vertices[c++] = points[i + 2];
-        }
-
-        DrawSolidVertices(vertices, color);
-    }
-
-    void SolidRegularNGon(Vector2 center, float radius, int sides, float rotation, Span<Vector2> points)
-    {
-        var angleDiff = MathF.Tau / sides;
-        for (var i = 0; i < sides; i++)
-        {
-            var angle = MathF.IEEERemainder(rotation + angleDiff * i, MathF.Tau);
-            var (sin, cos) = MathF.SinCos(angle);
-            points[i] = center + new Vector2(cos, sin) * radius;
-        }
-    }
-
-    public override void DrawSolidRegularNGon(Vector2 center, float radius, int sides, float rotation, Vector4 color)
-    {
-        Span<Vector2> points = stackalloc Vector2[sides];
-        SolidRegularNGon(center, radius, sides, rotation, points);
-        DrawSolidConvexPoly(points, color);
-    }
-
-    public override void DrawRegularNGonLines(Vector2 center, float radius, int sides, float rotation, float width, Vector4 color)
-    {
-        Span<Vector2> points = stackalloc Vector2[sides];
-        SolidRegularNGon(center, radius, sides, rotation, points);
-        DrawSolidLines(points, true, width, color);
     }
 
     public override void DrawSolidVertices(ReadOnlySpan<Vector2> triVertices, Vector4 color)
@@ -202,7 +153,22 @@ public unsafe sealed class OpenGLRenderer : Renderer
         _solidProgram.SetModel(&modelMatrix);
         _solidProgram.SetColor(ref color);
 
-        _gl.DrawArrays(PrimitiveType.Triangles, 0, (uint) triVertices.Length);    
+        _gl.DrawArrays(PrimitiveType.Triangles, 0, (uint) triVertices.Length);
+    }
+
+    public override void DrawSolidVertices(ReadOnlySpan<Vector2> triVertices, Vector2 translation, Vector2 scale, float rotation, Vector4 color)
+    {
+        _dynVao.Bind();
+        _dynVbo.Bind();
+        _dynVbo.BufferData(triVertices);
+        _dynVao.VertexAttribPointer(0, 2, VertexAttribPointerType.Float, false, 2, 0);
+
+        _solidProgram.Use();
+        var modelMatrix = GLHelper.ModelMatrix(translation, rotation, scale);
+        _solidProgram.SetModel(&modelMatrix);
+        _solidProgram.SetColor(ref color);
+
+        _gl.DrawArrays(PrimitiveType.Triangles, 0, (uint) triVertices.Length);
     }
 
     public override Vector2 MeasureText(string text, Font font, float size)
