@@ -1,5 +1,4 @@
 using System.Runtime.InteropServices;
-using System.Runtime.Intrinsics;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
 
@@ -7,16 +6,16 @@ namespace RenderyThing.OpenGL;
 
 public unsafe sealed class OpenGLRenderer : Renderer
 {   
-    static readonly float[] quadVertices =
+    static readonly Vector2[] quadVertices =
     {
     //  X     Y
-        0.0f, 1.0f,
-        1.0f, 0.0f,
-        0.0f, 0.0f,
+        new(0.0f, 1.0f),
+        new(1.0f, 0.0f),
+        new(0.0f, 0.0f),
     
-        0.0f, 1.0f,
-        1.0f, 1.0f,
-        1.0f, 0.0f,
+        new(0.0f, 1.0f),
+        new(1.0f, 1.0f),
+        new(1.0f, 0.0f),
     };
 
     readonly GL _gl;
@@ -30,7 +29,7 @@ public unsafe sealed class OpenGLRenderer : Renderer
 
     readonly ShaderProgram _texQuadProgram;
     readonly ShaderProgram _solidProgram;
-    public Matrix4x4 ProjectionMatrix { get; private set; }
+    internal Matrix4x4 ProjectionMatrix { get; private set; }
 
     Stream GetResStream(string path) => 
         GetType().Assembly.GetManifestResourceStream($"RenderyThing.OpenGL.{path}") ?? throw new FileNotFoundException($"{path} not found");
@@ -49,7 +48,7 @@ public unsafe sealed class OpenGLRenderer : Renderer
         _quadVao = new VertexArrayObject(_gl, _quadVbo);
 
         _quadVbo.Bind();
-        _quadVbo.BufferData(quadVertices.AsSpan());
+        _quadVbo.BufferData(quadVertices);
 
         _quadVao.Bind();
         //defines the array as having Vector2, basically
@@ -274,7 +273,7 @@ public unsafe sealed class OpenGLRenderer : Renderer
     {
         _dynVao.Bind();
         _dynVbo.Bind();
-        _dynVbo.BufferData(MemoryMarshal.Cast<Vector2, float>(triVertices));
+        _dynVbo.BufferData(triVertices);
         _dynVao.VertexAttribPointer(0, 2, VertexAttribPointerType.Float, false, 2, 0);
 
         _solidProgram.Use();

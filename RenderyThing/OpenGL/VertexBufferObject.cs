@@ -1,4 +1,5 @@
 using Silk.NET.OpenGL;
+using System.Runtime.InteropServices;
 
 namespace RenderyThing.OpenGL;
 
@@ -15,9 +16,19 @@ unsafe readonly struct VertexBufferObject : IDisposable
         Bind();
     }
     
+    public void BufferData(ReadOnlySpan<Vector2> data)
+    {
+        BufferData(MemoryMarshal.Cast<Vector2, float>(data));
+    }
+
     public void BufferData(ReadOnlySpan<float> data)
     {
         _gl.BufferData(BufferTargetARB.ArrayBuffer, data, _bufferUsage);
+    }
+
+    public void BufferSubData(nint offset, ReadOnlySpan<Vector2> data)
+    {
+        BufferSubData(offset, MemoryMarshal.Cast<Vector2, float>(data));
     }
 
     public void BufferSubData(nint offset, ReadOnlySpan<float> data)
