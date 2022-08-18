@@ -21,7 +21,7 @@ var turtles = new (Vector2 Pos, float Angle, Vector4 Col, Vector2 Dir, float Rot
 
 var options = WindowOptions.Default;
 options.Size = new(800, 600);
-options.Title = "RenderyThing Test Project";
+options.Title = "TurtleGraphics Test Project";
 
 window = Window.Create(options);
 
