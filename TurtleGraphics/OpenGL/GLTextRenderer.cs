@@ -45,7 +45,7 @@ unsafe class GLTextRenderer
         _fontQuadVao = new VertexArrayObject(_gl, _fontQuadVbo);
 
         _fontQuadVbo.Bind();
-        _fontQuadVbo.BufferData(quadVertices.AsSpan());
+        _fontQuadVbo.BufferData<float>(quadVertices);
 
         _fontQuadVao.Bind();
         //puts the vertex data itself first, then the UV data. makes it easier to copy over afterwards
@@ -146,7 +146,7 @@ unsafe class GLTextRenderer
             newUVs[10] = entry.UVRight; //eeeee
             newUVs[11] = entry.UVBottom; //eeeeeeeeeeeeeeeewwwwwwwwwwwwww
 
-            _fontQuadVbo.BufferSubData(offset: 12, newUVs);
+            _fontQuadVbo.BufferSubData<float>(offset: 12, newUVs);
             _fontQuadVao.VertexAttribPointer(0, 2, VertexAttribPointerType.Float, false, 2, 0);
             _fontQuadVao.VertexAttribPointer(1, 2, VertexAttribPointerType.Float, false, 2, 12);
 

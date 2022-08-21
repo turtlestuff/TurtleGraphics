@@ -1,4 +1,5 @@
 using Silk.NET.OpenGL;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Runtime.InteropServices;
 
 namespace TurtleGraphics.OpenGL;
@@ -15,25 +16,20 @@ unsafe readonly struct VertexBufferObject : IDisposable
         _bufferUsage = bufferUsage;
         Bind();
     }
-    
-    public void BufferData(ReadOnlySpan<Vector2> data)
-    {
-        BufferData(MemoryMarshal.Cast<Vector2, float>(data));
-    }
 
-    public void BufferData(ReadOnlySpan<float> data)
+    public void BufferData<T>(ReadOnlySpan<T> data) where T : unmanaged
     {
         _gl.BufferData(BufferTargetARB.ArrayBuffer, data, _bufferUsage);
     }
 
-    public void BufferSubData(nint offset, ReadOnlySpan<Vector2> data)
+    public void BufferData(void* data, nuint length)
     {
-        BufferSubData(offset, MemoryMarshal.Cast<Vector2, float>(data));
+        _gl.BufferData(BufferTargetARB.ArrayBuffer, length, data, _bufferUsage);
     }
 
-    public void BufferSubData(nint offset, ReadOnlySpan<float> data)
+    public void BufferSubData<T>(nint offset, ReadOnlySpan<T> data) where T : unmanaged
     {
-        _gl.BufferSubData(BufferTargetARB.ArrayBuffer, offset * sizeof(float), data);
+        _gl.BufferSubData(BufferTargetARB.ArrayBuffer, offset * sizeof(T), data);
     }
 
     public void Bind()

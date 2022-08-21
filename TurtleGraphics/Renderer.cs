@@ -70,6 +70,11 @@ public abstract class Renderer : IDisposable
     public virtual void DrawSolidRect(Rectangle<float> rect, float rotation, Vector4 color) =>
         DrawSolidRect((Vector2) rect.Origin, (Vector2) rect.Size, rotation, color);
 
+    public abstract void DrawSolidCircle(Vector2 position, Vector2 size, float rotation, Vector4 color);
+
+    public virtual void DrawSolidCircle(Rectangle<float> rect, float rotation, Vector4 color) =>
+        DrawSolidCircle((Vector2) rect.Origin, (Vector2) rect.Size, rotation, color);
+
     public virtual void DrawSolidLine(Vector2 from, Vector2 to, float width, Vector4 color)
     {
         Span<Vector2> vtxs = stackalloc Vector2[Shapes.LineVtxCount()];

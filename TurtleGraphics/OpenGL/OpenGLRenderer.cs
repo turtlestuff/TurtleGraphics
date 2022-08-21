@@ -1,4 +1,6 @@
+using System.ComponentModel;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
 
@@ -29,6 +31,8 @@ public unsafe sealed class OpenGLRenderer : Renderer
 
     readonly ShaderProgram _texQuadProgram;
     readonly ShaderProgram _solidProgram;
+    readonly ShaderProgram _circleProgram;
+
     internal Matrix4x4 ProjectionMatrix { get; private set; }
 
     Stream GetResStream(string path) => 
@@ -39,7 +43,9 @@ public unsafe sealed class OpenGLRenderer : Renderer
         using Stream texQuadVS = GetResStream("Shaders.texQuad.vert"),
             texQuadFS = GetResStream("Shaders.texQuad.frag"),
             solidVS = GetResStream("Shaders.solidColor.vert"),
-            solidFS = GetResStream("Shaders.solidColor.frag");
+            solidFS = GetResStream("Shaders.solidColor.frag"),
+            circleVS = GetResStream("Shaders.circleQuad.vert"),
+            circleFS = GetResStream("Shaders.circleQuad.frag");
 
         _gl = GL.GetApi(window);
         _gl.Viewport(FramebufferSize);
@@ -48,7 +54,7 @@ public unsafe sealed class OpenGLRenderer : Renderer
         _quadVao = new VertexArrayObject(_gl, _quadVbo);
 
         _quadVbo.Bind();
-        _quadVbo.BufferData(quadVertices);
+        _quadVbo.BufferData<Vector2>(quadVertices);
 
         _quadVao.Bind();
         //defines the array as having Vector2, basically
@@ -60,6 +66,7 @@ public unsafe sealed class OpenGLRenderer : Renderer
         //create shaders
         _texQuadProgram = new ShaderProgram(_gl, texQuadVS, texQuadFS);
         _solidProgram = new ShaderProgram(_gl, solidVS, solidFS);
+        _circleProgram = new ShaderProgram(_gl, circleVS, circleFS);
 
         //set some parameters with textures, apparently some drivers need this even if using with only 1 texture
         _texQuadProgram.Use();
@@ -107,6 +114,8 @@ public unsafe sealed class OpenGLRenderer : Renderer
         _texQuadProgram.SetProjection(&projectionMatrix);
         _solidProgram.Use();
         _solidProgram.SetProjection(&projectionMatrix);
+        _circleProgram.Use();
+        _circleProgram.SetProjection(&projectionMatrix);
         ProjectionMatrix = projectionMatrix;
         _textRenderer.UpdateProjectionMatrix(FramebufferSize, Scale); // text renderer renders at pixel resolution
     }
@@ -138,6 +147,18 @@ public unsafe sealed class OpenGLRenderer : Renderer
         _solidProgram.SetModel(&modelMatrix);
         _solidProgram.SetColor(ref color);
         
+        _gl.DrawArrays(PrimitiveType.Triangles, 0, 6);
+    }
+
+    public override void DrawSolidCircle(Vector2 position, Vector2 size, float rotation, Vector4 color)
+    {
+        _circleProgram.Use();
+        _quadVao.Bind();
+
+        var modelMatrix = GLHelper.ModelMatrix(position, rotation, size);
+        _circleProgram.SetModel(&modelMatrix);
+        _circleProgram.SetColor(ref color);
+
         _gl.DrawArrays(PrimitiveType.Triangles, 0, 6);
     }
 
