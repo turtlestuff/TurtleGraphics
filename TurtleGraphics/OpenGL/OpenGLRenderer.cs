@@ -192,6 +192,27 @@ public unsafe sealed class OpenGLRenderer : Renderer
         _gl.DrawArrays(PrimitiveType.Triangles, 0, (uint) triVertices.Length);
     }
 
+    public override void DrawTexturedVertices(ReadOnlySpan<Vector2> triVertices, Texture texture, Vector2 translation, Vector2 scale, float rotation, Vector4 color)
+    {
+        if(texture is not OpenGLTexture tex)
+        {
+            throw new RendererException($"invalid texture type: expected OpenGLTexture and got {texture.GetType().Name}");
+        }
+
+        _dynVao.Bind();
+        _dynVbo.Bind();
+        _dynVbo.BufferData(triVertices);
+        _dynVao.VertexAttribPointer(0, 2, VertexAttribPointerType.Float, false, 2, 0);
+
+        _texQuadProgram.Use();
+        var modelMatrix = GLHelper.ModelMatrix(translation, rotation, scale);
+        _texQuadProgram.SetModel(&modelMatrix);
+        _texQuadProgram.SetColor(ref color);
+
+        tex.Use();
+        _gl.DrawArrays(PrimitiveType.Triangles, 0, (uint) triVertices.Length);
+    }
+
     public override Vector2 MeasureText(string text, Font font, float size)
     {
         if (font is not GLStbttFont glFont)

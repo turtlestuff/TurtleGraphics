@@ -111,6 +111,8 @@ public abstract class Renderer : IDisposable
     public abstract void DrawSolidVertices(ReadOnlySpan<Vector2> triVertices, Vector4 color);
     public abstract void DrawSolidVertices(ReadOnlySpan<Vector2> triVertices, Vector2 translation, Vector2 scale, float rotation, Vector4 color);
 
+    public abstract void DrawTexturedVertices(ReadOnlySpan<Vector2> triVertices, Texture tex, Vector2 translation, Vector2 scale, float rotation, Vector4 color);
+
     public abstract void DrawText(string text, Vector2 position, Font font, float size, Vector4 color);
 
     public abstract void Clear(Vector4 color);
