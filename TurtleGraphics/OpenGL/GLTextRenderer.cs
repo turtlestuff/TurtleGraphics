@@ -2,6 +2,8 @@ using Silk.NET.OpenGL;
 
 namespace TurtleGraphics.OpenGL;
 
+using FloatingPointNumber = Single;
+
 unsafe class GLTextRenderer
 {
     static readonly float[] quadVertices =
@@ -14,14 +16,6 @@ unsafe class GLTextRenderer
         1.0f, 0.0f,
         0.0f, 1.0f,
         1.0f, 1.0f,
-        //UV
-        0.0f, 0.0f,
-        0.0f, 0.0f,
-        0.0f, 0.0f,
-        
-        0.0f, 0.0f,
-        0.0f, 0.0f,
-        0.0f, 0.0f,
     };
 
 
@@ -29,7 +23,8 @@ unsafe class GLTextRenderer
     readonly OpenGLRenderer _renderer;
     readonly ShaderProgram _fontShader;
     readonly VertexArrayObject _fontQuadVao;
-    readonly VertexBufferObject _fontQuadVbo;
+    readonly VertexBufferObject _fontQuadVtxVbo;
+    readonly VertexBufferObject _fontQuadTexCoordVbo;
 
     float _scale;
 
@@ -41,16 +36,22 @@ unsafe class GLTextRenderer
         using var frag = GLHelper.GetResStream("Shaders.fontQuad.frag");
         _fontShader = new(gl, vert, frag);
 
-        _fontQuadVbo = new VertexBufferObject(_gl, BufferUsageARB.DynamicDraw);
-        _fontQuadVao = new VertexArrayObject(_gl, _fontQuadVbo);
-
-        _fontQuadVbo.Bind();
-        _fontQuadVbo.BufferData<float>(quadVertices);
+        _fontQuadVtxVbo = new VertexBufferObject(_gl, BufferUsageARB.StaticDraw);
+        _fontQuadTexCoordVbo = new VertexBufferObject(_gl, BufferUsageARB.DynamicDraw);
+        _fontQuadVao = new VertexArrayObject(_gl, _fontQuadVtxVbo);
 
         _fontQuadVao.Bind();
+
+        _fontQuadVtxVbo.Bind();
+        _fontQuadVtxVbo.BufferData<float>(quadVertices);
+
         //puts the vertex data itself first, then the UV data. makes it easier to copy over afterwards
         _fontQuadVao.VertexAttribPointer(0, 2, VertexAttribPointerType.Float, false, 2, 0);
-        _fontQuadVao.VertexAttribPointer(1, 2, VertexAttribPointerType.Float, false, 2, 12);
+
+        _fontQuadTexCoordVbo.Bind();
+        _fontQuadTexCoordVbo.BufferData(null, 12);
+
+        _fontQuadVao.VertexAttribPointer(1, 2, VertexAttribPointerType.Float, false, 2, 0);
     }
 
     public void UpdateProjectionMatrix(Vector2D<int> newFBSize, float scale)
@@ -106,7 +107,6 @@ unsafe class GLTextRenderer
         var height = (ascent - descent) / _scale;
 
         _fontQuadVao.Bind();
-        _fontQuadVbo.Bind();
         _fontShader.Use();
         font.UseAtlasTexture();
 
@@ -146,9 +146,10 @@ unsafe class GLTextRenderer
             newUVs[10] = entry.UVRight; //eeeee
             newUVs[11] = entry.UVBottom; //eeeeeeeeeeeeeeeewwwwwwwwwwwwww
 
-            _fontQuadVbo.BufferSubData<float>(offset: 12, newUVs);
-            _fontQuadVao.VertexAttribPointer(0, 2, VertexAttribPointerType.Float, false, 2, 0);
-            _fontQuadVao.VertexAttribPointer(1, 2, VertexAttribPointerType.Float, false, 2, 12);
+            _fontQuadTexCoordVbo.Bind();
+            _fontQuadTexCoordVbo.BufferData<float>(newUVs); //stringling
+
+            _fontQuadVao.VertexAttribPointer(1, 2, VertexAttribPointerType.Float, false, 2, 0);
 
             var mat = GLHelper.ModelMatrix(new(textPos.X + leftSideBearing, textPos.Y + entry.Offset.Y), 0f, entry.Size);
 
